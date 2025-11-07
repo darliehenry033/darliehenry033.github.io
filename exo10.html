@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Rectangle + Circle (CSS)</title>
+  <style>
+
+    body {
+      margin: 0;
+      background: #f3f4f8;
+    }
+    .canvas {
+      position: relative;
+    }
+
+
+    .rect {
+      position: absolute;
+      left: 22px;      
+      top: 48px;      
+      width: 140px;
+      height: 140px;
+      background: #0033ff; 
+      border: 6px solid #000; 
+      box-sizing: border-box;
+    }
+    .circle {
+      position: absolute;
+      left: 100px;   
+      top: 54px;
+      width: 120px;
+      height: 120px;
+      background: #ffef00; 
+      border: 6px solid #e60000; 
+      border-radius: 50%;
+      box-sizing: border-box;
+
+      box-shadow: 0 2px 0 rgba(0,0,0,0.12);
+    }
+
+  </style>
+</head>
+<body>
+  <main class="canvas" role="img" aria-label="Blue rectangle with black border overlapped by yellow circle with red border">
+    <div class="rect" aria-hidden="true"></div>
+    <div class="circle" aria-hidden="true"></div>
+  </main>
+</body>
+</html>
