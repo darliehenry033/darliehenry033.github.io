@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Exercise 17 – Responsive Layout</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #5bb9ff;
+      display: flex;
+      justify-content: center;
+      padding: 30px;
+    }
+
+    .page {
+      background: white;
+      width: 100%;
+      max-width: 900px;
+      padding: 15px;
+      border-radius: 10px;
+    }
+
+    .header {
+      background: #b6db4c;
+      height: 120px;
+      margin-bottom: 10px;
+    }
+
+    .content {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .content div {
+      background: #00c6d7;
+      flex: 1;
+      height: 100px;
+    }
+
+    .footer {
+      display: flex;
+      gap: 10px;
+    }
+
+    .footer div {
+      background: #e9eef1;
+      flex: 1;
+      height: 60px;
+    }
+
+    /* ===============================
+       Viewport < 720px → COLUMNS ONLY
+       =============================== */
+    @media (max-width: 720px) {
+
+      .content div{
+        flex-direction: column;
+      }
+      
+      .footer div{
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="page">
+    <div class="header"></div>
+
+    <div class="content">
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
+
+    <div class="footer">
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
+  </div>
+
+</body>
+</html>
