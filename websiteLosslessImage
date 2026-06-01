@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lossless Image Compression</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0d14;
+    --bg2: #111520;
+    --bg3: #171c2b;
+    --card: #1a2035;
+    --border: rgba(100,140,255,0.12);
+    --border2: rgba(100,140,255,0.22);
+    --text: #e8edf8;
+    --muted: #7a8aaa;
+    --accent: #4f80ff;
+    --accent2: #7c5cfc;
+    --teal: #2dd4bf;
+    --amber: #f59e0b;
+    --coral: #f97316;
+    --green: #22c55e;
+    --pink: #ec4899;
+    --font-body: 'Outfit', sans-serif;
+    --font-serif: 'DM Serif Display', serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ——— NAV ——— */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(10,13,20,0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-logo {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .nav-links { display: flex; gap: 2rem; }
+  .nav-links a {
+    font-size: 13px; color: var(--muted);
+    text-decoration: none; letter-spacing: 0.04em;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+
+  /* ——— HERO ——— */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 80px 2rem 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 30% 40%, rgba(79,128,255,0.12) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 40% at 70% 60%, rgba(124,92,252,0.10) 0%, transparent 70%);
+  }
+  .hero-grid {
+    position: absolute; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(100,140,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(100,140,255,0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 30%, transparent 100%);
+  }
+  .hero-content { position: relative; z-index: 1; max-width: 800px; }
+  .hero-tag {
+    display: inline-block;
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase;
+    border: 1px solid rgba(79,128,255,0.3);
+    padding: 6px 16px; border-radius: 20px;
+    margin-bottom: 2rem;
+    background: rgba(79,128,255,0.06);
+    animation: fadeUp 0.8s ease both;
+  }
+  .hero h1 {
+    font-family: var(--font-serif);
+    font-size: clamp(2.8rem, 7vw, 5.5rem);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.8s ease 0.1s both;
+  }
+  .hero h1 span { color: var(--accent); font-style: italic; }
+  .hero-desc {
+    font-size: 1.15rem; color: var(--muted); max-width: 600px; margin: 0 auto 3rem;
+    font-weight: 300; line-height: 1.8;
+    animation: fadeUp 0.8s ease 0.2s both;
+  }
+  .hero-cta {
+    display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
+    animation: fadeUp 0.8s ease 0.3s both;
+  }
+  .btn {
+    padding: 12px 28px; border-radius: 8px;
+    font-family: var(--font-body); font-size: 14px; font-weight: 500;
+    cursor: pointer; text-decoration: none; transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .btn-primary {
+    background: var(--accent); color: #fff;
+    border: none;
+  }
+  .btn-primary:hover { background: #3a6ef0; transform: translateY(-1px); }
+  .btn-outline {
+    background: transparent; color: var(--text);
+    border: 1px solid var(--border2);
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ——— PIXEL VIZ (hero) ——— */
+  .pixel-demo {
+    position: relative; z-index: 1;
+    margin-top: 4rem;
+    animation: fadeUp 0.8s ease 0.4s both;
+  }
+  .pixel-row { display: flex; justify-content: center; gap: 4px; margin-bottom: 4px; }
+  .px {
+    width: 32px; height: 32px; border-radius: 4px;
+    transition: all 1.2s ease;
+    font-family: var(--font-mono); font-size: 9px;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.5); font-weight: 500;
+  }
+
+  /* ——— SECTIONS ——— */
+  section { padding: 6rem 2rem; }
+  .section-inner { max-width: 1100px; margin: 0 auto; }
+  .section-tag {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--teal); letter-spacing: 0.12em; text-transform: uppercase;
+    margin-bottom: 0.75rem; display: block;
+  }
+  .section-title {
+    font-family: var(--font-serif);
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1.15;
+    margin-bottom: 1rem;
+    letter-spacing: -0.02em;
+  }
+  .section-title span { color: var(--accent); font-style: italic; }
+  .section-sub { color: var(--muted); max-width: 600px; font-size: 1.05rem; line-height: 1.8; margin-bottom: 3rem; }
+
+  /* ——— CONCEPT CARD ——— */
+  .concept-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+  .concept-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    transition: border-color 0.25s, transform 0.25s;
+    position: relative; overflow: hidden;
+  }
+  .concept-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(79,128,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .concept-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+  .card-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 1.25rem; font-size: 22px;
+  }
+  .icon-blue { background: rgba(79,128,255,0.15); }
+  .icon-teal { background: rgba(45,212,191,0.15); }
+  .icon-amber { background: rgba(245,158,11,0.15); }
+  .icon-coral { background: rgba(249,115,22,0.15); }
+  .icon-purple { background: rgba(124,92,252,0.15); }
+  .icon-pink { background: rgba(236,72,153,0.15); }
+  .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .card-body { font-size: 0.92rem; color: var(--muted); line-height: 1.7; }
+
+  /* ——— DIVIDER ——— */
+  .divider {
+    border: none; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border2), transparent);
+    margin: 0;
+  }
+
+  /* ——— BIT PLANE SECTION ——— */
+  #bitplane { background: var(--bg2); }
+  .bp-demo {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start;
+  }
+  @media(max-width: 700px) { .bp-demo { grid-template-columns: 1fr; } }
+  .bp-left h3 { font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; }
+  .pixel-value-display {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.5rem;
+    font-family: var(--font-mono);
+    margin-bottom: 1.5rem;
+  }
+  .pv-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+  .pv-value { font-size: 2.5rem; font-weight: 500; color: var(--amber); margin-bottom: 0.75rem; }
+  .pv-binary { font-size: 1.2rem; letter-spacing: 0.15em; }
+  .bit-highlight { color: var(--accent); }
+  .bit-planes-grid { display: flex; flex-direction: column; gap: 0.75rem; }
+  .bp-row {
+    display: flex; align-items: center; gap: 1rem;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.75rem 1rem;
+    transition: border-color 0.2s;
+    cursor: default;
+  }
+  .bp-row:hover { border-color: var(--border2); }
+  .bp-plane-num {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--muted); width: 40px; flex-shrink: 0;
+  }
+  .bp-bar-container { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+  .bp-bar { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+  .bp-bit-val {
+    font-family: var(--font-mono); font-size: 14px; font-weight: 500;
+    width: 24px; text-align: right; flex-shrink: 0;
+  }
+  .bp-weight { font-family: var(--font-mono); font-size: 11px; color: var(--muted); width: 36px; text-align: right; }
+  .pixel-slider-wrap { margin-top: 1.5rem; }
+  .slider-label { font-size: 13px; color: var(--muted); margin-bottom: 0.5rem; }
+  input[type=range] {
+    width: 100%; accent-color: var(--accent);
+    height: 4px; cursor: pointer;
+  }
+
+  /* ——— RLC SECTION ——— */
+  .rlc-container {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 16px; padding: 2rem;
+    margin-top: 2rem;
+  }
+  .rlc-title { font-size: 13px; color: var(--muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--font-mono); }
+  .rlc-bits { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 1.5rem; }
+  .rlc-bit {
+    width: 36px; height: 36px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 15px; font-weight: 500;
+    transition: all 0.3s; cursor: pointer;
+  }
+  .rlc-bit.zero { background: rgba(100,120,160,0.2); color: var(--muted); }
+  .rlc-bit.one { background: rgba(79,128,255,0.25); color: var(--accent); }
+  .rlc-bit.run-zero { background: rgba(100,120,160,0.4); box-shadow: 0 0 0 1px rgba(100,120,160,0.4); }
+  .rlc-bit.run-one { background: rgba(79,128,255,0.45); box-shadow: 0 0 0 1px rgba(79,128,255,0.6); }
+  .rlc-output {
+    font-family: var(--font-mono); font-size: 14px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1rem 1.25rem;
+  }
+  .rlc-before { color: var(--muted); margin-bottom: 0.4rem; font-size: 12px; }
+  .rlc-after-val { font-size: 1.1rem; color: var(--green); margin-top: 0.5rem; }
+  .compression-badge {
+    display: inline-block; padding: 4px 10px;
+    background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.25);
+    color: var(--green); border-radius: 6px;
+    font-size: 12px; font-family: var(--font-mono); margin-top: 0.75rem;
+  }
+
+  /* ——— PREDICTIVE CODING ——— */
+  #predictive { background: var(--bg); }
+  .pred-demo {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start;
+    margin-top: 2rem;
+  }
+  @media(max-width: 700px) { .pred-demo { grid-template-columns: 1fr; } }
+  .pixel-grid-demo {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.5rem;
+  }
+  .pg-title { font-size: 12px; color: var(--muted); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; }
+  .pg-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .pg-cell {
+    aspect-ratio: 1; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+    transition: all 0.3s; position: relative;
+    border: 1px solid transparent;
+  }
+  .pg-cell.known { background: rgba(45,212,191,0.2); color: var(--teal); border-color: rgba(45,212,191,0.3); }
+  .pg-cell.target { background: rgba(79,128,255,0.3); color: var(--accent); border-color: rgba(79,128,255,0.6); animation: pulse 1.5s ease-in-out infinite; }
+  .pg-cell.empty { background: rgba(255,255,255,0.04); color: var(--muted); border-color: var(--border); }
+  @keyframes pulse { 0%,100%{ box-shadow: 0 0 0 0 rgba(79,128,255,0.4); } 50%{ box-shadow: 0 0 0 6px rgba(79,128,255,0); } }
+  .pred-formula {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .pf-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem; }
+  .pf-eq {
+    font-family: var(--font-mono); font-size: 1.1rem;
+    color: var(--text); line-height: 2;
+  }
+  .pf-eq .var-a { color: var(--teal); }
+  .pf-eq .var-b { color: var(--amber); }
+  .pf-eq .var-c { color: var(--coral); }
+  .pf-eq .var-pred { color: var(--accent); }
+  .histogram-wrap { margin-top: 1rem; }
+  .hist-label { font-size: 12px; color: var(--muted); margin-bottom: 0.75rem; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; }
+  .hist-bars { display: flex; align-items: flex-end; gap: 2px; height: 80px; }
+  .hist-bar { flex: 1; border-radius: 2px 2px 0 0; transition: height 0.5s ease; }
+  .hist-bar.original { background: rgba(245,158,11,0.5); }
+  .hist-bar.error { background: rgba(79,128,255,0.6); }
+  .hist-x { display: flex; justify-content: space-between; margin-top: 4px; }
+  .hist-x span { font-family: var(--font-mono); font-size: 9px; color: var(--muted); }
+
+  /* ——— ENTROPY SECTION ——— */
+  #entropy { background: var(--bg2); }
+  .entropy-viz {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;
+    margin-top: 2rem;
+  }
+  @media(max-width: 700px) { .entropy-viz { grid-template-columns: 1fr; } }
+  .entropy-card {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.5rem;
+  }
+  .ec-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; font-family: var(--font-mono); }
+  .huffman-tree { font-family: var(--font-mono); font-size: 13px; }
+  .ht-node { display: flex; align-items: center; margin-bottom: 0.5rem; padding-left: 0; }
+  .ht-sym { 
+    display: inline-block; padding: 2px 8px;
+    border-radius: 4px; font-weight: 500; min-width: 28px; text-align: center;
+    margin-right: 8px;
+  }
+  .ht-code { color: var(--accent); margin-right: 8px; }
+  .ht-freq { color: var(--muted); font-size: 11px; }
+  .ht-bar-mini { height: 4px; border-radius: 2px; margin-top: 6px; transition: width 0.5s; }
+
+  /* ——— APPLICATIONS ——— */
+  #applications { background: var(--bg); }
+  .app-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; }
+  .app-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 1.75rem;
+    transition: all 0.25s;
+    position: relative; overflow: hidden;
+  }
+  .app-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+  .app-card::after {
+    content: ''; position: absolute;
+    bottom: 0; left: 0; right: 0; height: 3px;
+    opacity: 0; transition: opacity 0.25s;
+  }
+  .app-card:hover::after { opacity: 1; }
+  .app-card.med::after { background: linear-gradient(90deg, var(--teal), var(--accent)); }
+  .app-card.sci::after { background: linear-gradient(90deg, var(--amber), var(--coral)); }
+  .app-card.arc::after { background: linear-gradient(90deg, var(--accent2), var(--pink)); }
+  .app-card.net::after { background: linear-gradient(90deg, var(--green), var(--teal)); }
+  .app-emoji { font-size: 2rem; margin-bottom: 1rem; }
+  .app-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .app-body { font-size: 0.88rem; color: var(--muted); line-height: 1.65; }
+  .app-badge {
+    display: inline-block; margin-top: 1rem;
+    padding: 4px 10px; border-radius: 6px;
+    font-size: 11px; font-family: var(--font-mono); font-weight: 500;
+    background: rgba(79,128,255,0.1); color: var(--accent);
+    border: 1px solid rgba(79,128,255,0.2);
+  }
+
+  /* ——— COMPARISON TABLE ——— */
+  #comparison { background: var(--bg2); }
+  .comp-table-wrap {
+    overflow-x: auto; border-radius: 16px;
+    border: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead tr { background: rgba(79,128,255,0.08); }
+  th {
+    padding: 1rem 1.25rem; text-align: left;
+    font-size: 12px; font-family: var(--font-mono); text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 0.9rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .td-name { font-weight: 600; color: var(--accent); font-family: var(--font-mono); }
+  .badge-small {
+    display: inline-block; padding: 2px 8px;
+    border-radius: 4px; font-size: 11px; font-family: var(--font-mono);
+    margin: 0 2px;
+  }
+  .bg-green { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+  .bg-amber { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+  .bg-blue { background: rgba(79,128,255,0.12); color: var(--accent); border: 1px solid rgba(79,128,255,0.2); }
+  .bg-coral { background: rgba(249,115,22,0.12); color: var(--coral); border: 1px solid rgba(249,115,22,0.2); }
+  .bg-teal { background: rgba(45,212,191,0.12); color: var(--teal); border: 1px solid rgba(45,212,191,0.2); }
+  .bg-purple { background: rgba(124,92,252,0.12); color: var(--accent2); border: 1px solid rgba(124,92,252,0.2); }
+
+  /* ——— AI SECTION ——— */
+  #ai { background: var(--bg); }
+  .ai-highlight {
+    background: linear-gradient(135deg, rgba(124,92,252,0.12), rgba(79,128,255,0.08));
+    border: 1px solid rgba(124,92,252,0.25);
+    border-radius: 16px; padding: 2.5rem;
+    margin-top: 2rem;
+    position: relative; overflow: hidden;
+  }
+  .ai-highlight::before {
+    content: ''; position: absolute;
+    top: -60px; right: -60px; width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(124,92,252,0.15), transparent 70%);
+    pointer-events: none;
+  }
+  .ai-title { font-size: 1.3rem; font-weight: 600; margin-bottom: 0.75rem; }
+  .ai-body { color: var(--muted); font-size: 0.95rem; line-height: 1.8; max-width: 680px; }
+  .ai-token-demo { margin-top: 2rem; }
+  .token-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .token {
+    padding: 6px 12px; border-radius: 8px;
+    font-family: var(--font-mono); font-size: 13px; font-weight: 500;
+    border: 1px solid transparent; transition: all 0.3s;
+    cursor: default;
+  }
+
+  /* ——— TRADEOFF SECTION ——— */
+  #tradeoff { background: var(--bg2); }
+  .tradeoff-chart {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 16px; padding: 2rem;
+    margin-top: 2rem;
+  }
+  .tc-label { font-family: var(--font-mono); font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1.5rem; }
+  .tc-bar-group { margin-bottom: 1.25rem; }
+  .tc-row { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .tc-name { font-size: 13px; font-weight: 500; width: 80px; flex-shrink: 0; }
+  .tc-track { flex: 1; height: 10px; background: rgba(255,255,255,0.06); border-radius: 5px; overflow: hidden; }
+  .tc-fill { height: 100%; border-radius: 5px; transition: width 1s ease; }
+  .tc-val { font-family: var(--font-mono); font-size: 12px; color: var(--muted); width: 36px; }
+  .tc-metric-label { font-size: 11px; color: var(--muted); margin-bottom: 0.5rem; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* ——— FOOTER ——— */
+  footer {
+    padding: 3rem 2rem;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    color: var(--muted); font-size: 13px;
+  }
+  footer strong { color: var(--text); }
+
+  /* ——— ANIMATIONS ——— */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in { opacity: 0; transform: translateY(20px); transition: all 0.6s ease; }
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+  /* ——— INTERACTIVE SLIDER DEMO ——— */
+  .interactive-banner {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(79,128,255,0.08); border: 1px solid rgba(79,128,255,0.2);
+    border-radius: 8px; padding: 6px 14px;
+    font-size: 12px; color: var(--accent); margin-bottom: 2rem;
+    font-family: var(--font-mono);
+  }
+  .dot-anim { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; animation: blink 1.2s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: rgba(100,140,255,0.2); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-logo">// Lossless Compression</span>
+  <div class="nav-links">
+    <a href="#bitplane">Bit-Plane</a>
+    <a href="#predictive">Predictive</a>
+    <a href="#applications">Applications</a>
+    <a href="#comparison">Methods</a>
+    <a href="#ai">AI Frontier</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-tag">📐 Signal Processing &amp; Data Theory</div>
+    <h1>Lossless Image<br><span>Compression</span></h1>
+    <p class="hero-desc">How computers shrink image files to a fraction of their size — without losing a single pixel of data.</p>
+    <div class="hero-cta">
+      <a href="#bitplane" class="btn btn-primary">Explore the Techniques</a>
+      <a href="#comparison" class="btn btn-outline">Compare Methods</a>
+    </div>
+
+    <div class="pixel-demo">
+      <div id="pixel-visual"></div>
+      <div style="margin-top:12px;font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:0.08em;">
+        SAME IMAGE · ORIGINAL → COMPRESSED → RESTORED
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- OVERVIEW -->
+<section id="overview">
+  <div class="section-inner">
+    <span class="section-tag">Core Concept</span>
+    <h2 class="section-title fade-in">What makes it <span>lossless?</span></h2>
+    <p class="section-sub fade-in">Unlike lossy compression (used in JPEG), lossless compression guarantees a pixel-perfect reconstruction of the original image. The key is exploiting <em>redundancy</em> — repeating patterns that don't need to be stored twice.</p>
+
+    <div class="concept-grid">
+      <div class="concept-card fade-in">
+        <div class="card-icon icon-blue">🔍</div>
+        <div class="card-title">Redundancy Elimination</div>
+        <div class="card-body">Images contain vast spatial redundancy — neighboring pixels tend to be similar. Compression algorithms find and remove this repetition without discarding information.</div>
+      </div>
+      <div class="concept-card fade-in">
+        <div class="card-icon icon-teal">📐</div>
+        <div class="card-title">Perfect Fidelity</div>
+        <div class="card-body">Every single bit of the original image is recoverable after decompression. The decoded file is mathematically identical to the source — bit for bit.</div>
+      </div>
+      <div class="concept-card fade-in">
+        <div class="card-icon icon-amber">⚡</div>
+        <div class="card-title">Two Core Approaches</div>
+        <div class="card-body">Bit-plane transformation encodes binary layers efficiently. Predictive coding stores prediction errors rather than raw values — both exploit pixel correlation differently.</div>
+      </div>
+      <div class="concept-card fade-in">
+        <div class="card-icon icon-coral">📊</div>
+        <div class="card-title">Entropy Coding</div>
+        <div class="card-body">A final stage uses Huffman or Arithmetic coding to assign shorter binary codes to frequently occurring values — squeezing every last bit of redundancy out.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- BIT-PLANE TRANSFORMATION -->
+<section id="bitplane">
+  <div class="section-inner">
+    <span class="section-tag">Technique 01</span>
+    <h2 class="section-title fade-in">Bit-Plane <span>Transformation</span></h2>
+    <p class="section-sub fade-in">An 8-bit pixel value (0–255) is broken into 8 separate binary layers. Each layer contains just one bit per pixel. Smooth image regions produce long runs of identical bits — perfect for compression.</p>
+
+    <div class="interactive-banner"><span class="dot-anim"></span> Interactive · adjust the slider below</div>
+
+    <div class="bp-demo">
+      <div class="bp-left">
+        <h3>Pixel Value Breakdown</h3>
+        <div class="pixel-value-display">
+          <div class="pv-label">Pixel Intensity</div>
+          <div class="pv-value" id="pv-num">173</div>
+          <div class="pv-label" style="margin-top:0.5rem">Binary Representation</div>
+          <div class="pv-binary" id="pv-binary">
+            <span class="bit-highlight">1</span>0<span class="bit-highlight">1</span>0<span class="bit-highlight">1</span>10<span class="bit-highlight">1</span>
+          </div>
+        </div>
+        <div class="pixel-slider-wrap">
+          <div class="slider-label">Adjust pixel value: <strong id="slider-display">173</strong></div>
+          <input type="range" id="pixel-slider" min="0" max="255" value="173">
+        </div>
+        <div style="margin-top:1.5rem;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:1.25rem;">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:0.5rem;">💡 Why it matters</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.7;">The <strong>most significant bits</strong> (planes 7–5) carry the main structure of the image. The <strong>least significant bits</strong> (planes 0–2) contain fine details and appear almost random — these are harder to compress.</div>
+        </div>
+      </div>
+      <div class="bp-right">
+        <h3 style="margin-bottom:1rem;">8 Bit-Planes</h3>
+        <div class="bit-planes-grid" id="bp-grid"></div>
+      </div>
+    </div>
+
+    <!-- RLC Demo -->
+    <div style="margin-top:3rem;">
+      <h3 style="font-size:1.1rem;margin-bottom:0.5rem;">Run-Length Coding (RLC) on Bit-Planes</h3>
+      <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem;">Smooth regions in an image produce long runs of the same bit (0 or 0 or 0 or 1 or 1 or 1...). RLC stores the <em>count</em> instead of each individual bit, dramatically reducing data.</p>
+      <div class="rlc-container">
+        <div class="rlc-title">Bit-plane 7 — sample row (click to toggle bits)</div>
+        <div class="rlc-bits" id="rlc-bits"></div>
+        <div class="rlc-output">
+          <div class="rlc-before">Raw bit stream:</div>
+          <div style="font-family:var(--font-mono);font-size:13px;letter-spacing:0.08em;color:var(--text);" id="rlc-raw"></div>
+          <div class="rlc-before" style="margin-top:0.75rem;">After Run-Length Coding:</div>
+          <div class="rlc-after-val" id="rlc-encoded"></div>
+          <div id="rlc-badge"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- PREDICTIVE CODING -->
+<section id="predictive">
+  <div class="section-inner">
+    <span class="section-tag">Technique 02</span>
+    <h2 class="section-title fade-in">Lossless <span>Predictive Coding</span></h2>
+    <p class="section-sub fade-in">Instead of storing raw pixel values, the encoder makes a <em>prediction</em> from neighboring pixels and only stores the error. Since neighbors are usually similar, errors are small — and small numbers compress far better.</p>
+
+    <div class="pred-demo">
+      <div>
+        <div class="pixel-grid-demo">
+          <div class="pg-title">Pixel neighborhood (5×5 excerpt)</div>
+          <div class="pg-grid" id="pg-grid"></div>
+          <div style="margin-top:1rem;font-size:12px;color:var(--muted);line-height:1.6;">
+            <span style="display:inline-block;width:10px;height:10px;background:rgba(45,212,191,0.3);border-radius:2px;margin-right:6px;vertical-align:middle;"></span>Known neighbors &nbsp;
+            <span style="display:inline-block;width:10px;height:10px;background:rgba(79,128,255,0.4);border-radius:2px;margin-right:6px;vertical-align:middle;"></span>Target pixel
+          </div>
+        </div>
+
+        <div style="margin-top:1.5rem;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:1.25rem;">
+          <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;font-family:var(--font-mono);">JPEG-LS / LOCO-I Median Edge Detector</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.8;">
+            The <strong style="color:var(--teal);">MED predictor</strong> tests for horizontal or vertical edges:<br>
+            <span style="font-family:var(--font-mono);color:var(--accent);font-size:12px;">
+              if C ≤ min(A,B): predict = max(A,B)<br>
+              if C ≥ max(A,B): predict = min(A,B)<br>
+              else: predict = A + B - C
+            </span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="pred-formula">
+          <div class="pf-label">Prediction Formula</div>
+          <div class="pf-eq">
+            <span class="var-pred">P̂</span> = f(<span class="var-a">A</span>, <span class="var-b">B</span>, <span class="var-c">C</span>)<br>
+            error = <span>X</span> − <span class="var-pred">P̂</span>
+          </div>
+          <div style="margin-top:1rem;font-size:12px;color:var(--muted);">
+            <span class="var-a" style="font-family:var(--font-mono);">A</span> = left neighbor &nbsp;
+            <span class="var-b" style="font-family:var(--font-mono);">B</span> = top neighbor &nbsp;
+            <span class="var-c" style="font-family:var(--font-mono);">C</span> = top-left &nbsp;
+            <span style="font-family:var(--font-mono);">X</span> = current pixel
+          </div>
+        </div>
+
+        <div class="pred-formula">
+          <div class="pf-label">Live Example</div>
+          <div id="pred-example" style="font-family:var(--font-mono);font-size:13px;line-height:2;"></div>
+        </div>
+
+        <div class="histogram-wrap">
+          <div class="hist-label">Error distribution vs original values</div>
+          <div style="display:flex;gap:1rem;margin-bottom:0.5rem;">
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);">
+              <div style="width:12px;height:12px;border-radius:2px;background:rgba(245,158,11,0.5);"></div> Original pixels
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);">
+              <div style="width:12px;height:12px;border-radius:2px;background:rgba(79,128,255,0.6);"></div> Prediction errors
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            <div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Original (flat histogram)</div>
+              <div class="hist-bars" id="hist-orig"></div>
+              <div class="hist-x"><span>0</span><span>128</span><span>255</span></div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Error values (peaked at zero)</div>
+              <div class="hist-bars" id="hist-err"></div>
+              <div class="hist-x"><span>-20</span><span>0</span><span>+20</span></div>
+            </div>
+          </div>
+          <div style="margin-top:1rem;padding:0.75rem;background:rgba(79,128,255,0.06);border:1px solid rgba(79,128,255,0.15);border-radius:8px;font-size:12px;color:var(--muted);line-height:1.7;">
+            🎯 The error histogram is tightly peaked around <strong style="color:var(--accent);">zero</strong>. Fewer distinct values = lower entropy = fewer bits needed = better compression.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ENTROPY -->
+<section id="entropy">
+  <div class="section-inner">
+    <span class="section-tag">Technique 03</span>
+    <h2 class="section-title fade-in">Entropy <span>Coding</span></h2>
+    <p class="section-sub fade-in">Once spatial redundancy is removed, entropy coding assigns <em>shorter binary codes to more frequent symbols</em>. This is the final compression stage used in virtually all lossless formats.</p>
+
+    <div class="entropy-viz">
+      <div class="entropy-card fade-in">
+        <div class="ec-label">Huffman Code Table</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:1rem;line-height:1.6;">Frequent prediction errors (near zero) get shorter codes. Rare values get longer codes. On average, this beats fixed-length encoding.</div>
+        <div class="huffman-tree" id="huffman-display"></div>
+      </div>
+      <div class="entropy-card fade-in">
+        <div class="ec-label">Arithmetic Coding</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:1.5rem;line-height:1.6;">Arithmetic coding represents the entire message as a single fraction in [0,1). It can achieve the theoretical entropy limit and is used in JPEG-LS, HEIF, and WebP.</div>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.25rem;">
+          <div style="font-family:var(--font-mono);font-size:12px;color:var(--muted);margin-bottom:0.5rem;">Number line subdivision</div>
+          <div id="arith-viz" style="height:40px;position:relative;border-radius:4px;overflow:hidden;"></div>
+          <div style="margin-top:0.75rem;font-size:12px;color:var(--muted);">Each symbol subdivides the interval according to its probability. The final interval encodes the entire sequence.</div>
+        </div>
+        <div style="margin-top:1.5rem;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.15);border-radius:8px;padding:1rem;">
+          <div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:0.4rem;">💡 Practical comparison</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.7;">Huffman: ~0.05 bits above entropy limit. Fast, widely supported (PNG, DEFLATE).<br>Arithmetic: reaches theoretical entropy limit. Used when maximum compression matters.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- APPLICATIONS -->
+<section id="applications">
+  <div class="section-inner">
+    <span class="section-tag">Real-World Use</span>
+    <h2 class="section-title fade-in">Why <span>Lossless</span> Matters</h2>
+    <p class="section-sub fade-in">In fields where every pixel carries critical information, lossy compression is simply not an option. Here's where lossless compression makes an irreplaceable difference.</p>
+
+    <div class="app-grid">
+      <div class="app-card med fade-in">
+        <div class="app-emoji">🏥</div>
+        <div class="app-title">Medical Imaging</div>
+        <div class="app-body">MRI, CT, and Ultrasound scans must be stored and transmitted without any data loss. A misread lesion caused by compression artifacts could mean a misdiagnosis. DICOM uses lossless codecs exclusively for diagnostic images.</div>
+        <span class="app-badge">DICOM · JPEG-LS</span>
+      </div>
+      <div class="app-card sci fade-in">
+        <div class="app-emoji">🔬</div>
+        <div class="app-title">Scientific Data</div>
+        <div class="app-body">Satellite imagery, astronomical photography, and microscopy generate terabytes of precision data. Any lossy artifact would corrupt scientific measurements — lossless is mandatory.</div>
+        <span class="app-badge">FITS · PNG · TIFF</span>
+      </div>
+      <div class="app-card arc fade-in">
+        <div class="app-emoji">🗄️</div>
+        <div class="app-title">Digital Archiving</div>
+        <div class="app-body">Libraries and museums digitize rare documents and artworks for permanent preservation. Only lossless formats guarantee the archive will be identical to the original in 100 years.</div>
+        <span class="app-badge">TIFF · PNG · WebP-L</span>
+      </div>
+      <div class="app-card net fade-in">
+        <div class="app-emoji">🌐</div>
+        <div class="app-title">Web &amp; Bandwidth</div>
+        <div class="app-body">PNG and WebP (lossless mode) reduce bandwidth for UI graphics, icons, and screenshots — transparent backgrounds, crisp text, and pixel-perfect logos all require lossless encoding.</div>
+        <span class="app-badge">PNG · WebP · AVIF</span>
+      </div>
+      <div class="app-card fade-in" style="border-color:rgba(245,158,11,0.2);">
+        <div class="app-emoji">🎞️</div>
+        <div class="app-title">Professional Video</div>
+        <div class="app-body">Cinema RAW and professional editing workflows use lossless video (ProRes 4444, Apple ProRes RAW) to preserve maximum quality through color grading and compositing pipelines.</div>
+        <span class="app-badge bg-amber">ProRes · REDCODE</span>
+      </div>
+      <div class="app-card fade-in" style="border-color:rgba(236,72,153,0.2);">
+        <div class="app-emoji">🧠</div>
+        <div class="app-title">ROI Coding (Medical)</div>
+        <div class="app-body">Region-of-Interest compression isolates the clinically relevant portion of an image for maximal lossless fidelity, while applying higher compression elsewhere — balancing diagnostic integrity with storage efficiency.</div>
+        <span class="app-badge bg-purple">JPEG 2000 · ROI</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- COMPARISON TABLE -->
+<section id="comparison">
+  <div class="section-inner">
+    <span class="section-tag">Method Comparison</span>
+    <h2 class="section-title fade-in">Choosing the <span>Right Algorithm</span></h2>
+    <p class="section-sub fade-in">Each lossless format makes different trade-offs between compression ratio, speed, and complexity. There is no single winner — context decides.</p>
+
+    <div class="comp-table-wrap fade-in">
+      <table>
+        <thead>
+          <tr>
+            <th>Format</th>
+            <th>Algorithm</th>
+            <th>Compression</th>
+            <th>Speed</th>
+            <th>Use Case</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-name">PNG</td>
+            <td>DEFLATE (LZ77 + Huffman)</td>
+            <td><span class="badge-small bg-amber">Good</span></td>
+            <td><span class="badge-small bg-green">Fast</span></td>
+            <td>Web, screenshots, UI</td>
+            <td>Universal support, transparent backgrounds</td>
+          </tr>
+          <tr>
+            <td class="td-name">JPEG-LS</td>
+            <td>LOCO-I (MED + Golomb)</td>
+            <td><span class="badge-small bg-green">Excellent</span></td>
+            <td><span class="badge-small bg-green">Very Fast</span></td>
+            <td>Medical imaging (DICOM)</td>
+            <td>Low complexity, near-optimal prediction</td>
+          </tr>
+          <tr>
+            <td class="td-name">JPEG 2000</td>
+            <td>Wavelet + Arithmetic</td>
+            <td><span class="badge-small bg-green">Excellent</span></td>
+            <td><span class="badge-small bg-amber">Moderate</span></td>
+            <td>Archiving, cinema, ROI</td>
+            <td>Supports lossy+lossless in one format</td>
+          </tr>
+          <tr>
+            <td class="td-name">WebP</td>
+            <td>VP8L (LZ77 + Huffman + color cache)</td>
+            <td><span class="badge-small bg-green">Very Good</span></td>
+            <td><span class="badge-small bg-green">Fast</span></td>
+            <td>Modern web</td>
+            <td>~26% smaller than PNG on average</td>
+          </tr>
+          <tr>
+            <td class="td-name">AVIF</td>
+            <td>AV1 (intra-frame)</td>
+            <td><span class="badge-small bg-blue">Best</span></td>
+            <td><span class="badge-small bg-coral">Slow</span></td>
+            <td>High-quality web delivery</td>
+            <td>Cutting-edge; growing browser support</td>
+          </tr>
+          <tr>
+            <td class="td-name">FLIF</td>
+            <td>MANIAC (Arithmetic)</td>
+            <td><span class="badge-small bg-blue">Best</span></td>
+            <td><span class="badge-small bg-coral">Very Slow</span></td>
+            <td>Research, archiving</td>
+            <td>Best compression ratio; replaced by JPEG XL</td>
+          </tr>
+          <tr>
+            <td class="td-name">JPEG XL</td>
+            <td>VarDCT + Modular</td>
+            <td><span class="badge-small bg-blue">Best</span></td>
+            <td><span class="badge-small bg-amber">Moderate</span></td>
+            <td>Universal replacement</td>
+            <td>JPEG transcoding, HDR, lossless+lossy</td>
+          </tr>
+          <tr>
+            <td class="td-name">P-LLM</td>
+            <td>Large Language Model</td>
+            <td><span class="badge-small bg-purple">Frontier</span></td>
+            <td><span class="badge-small bg-coral">Slow (GPU)</span></td>
+            <td>Research</td>
+            <td>AI-based next-pixel prediction; state-of-the-art ratio</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Tradeoff chart -->
+    <div class="tradeoff-chart fade-in" style="margin-top:2rem;">
+      <div class="tc-label">Compression Ratio vs Speed — relative scale</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;">
+        <div>
+          <div class="tc-metric-label">Compression ratio (higher = better)</div>
+          <div id="tc-ratio"></div>
+        </div>
+        <div>
+          <div class="tc-metric-label">Encoding speed (higher = faster)</div>
+          <div id="tc-speed"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- AI SECTION -->
+<section id="ai">
+  <div class="section-inner">
+    <span class="section-tag">The AI Frontier</span>
+    <h2 class="section-title fade-in">Treating Pixels as <span>Language</span></h2>
+    <p class="section-sub fade-in">The newest frontier in lossless compression uses Large Language Models to predict pixel values — treating an image as a sequence of "visual tokens," just like words in a sentence.</p>
+
+    <div class="ai-highlight fade-in">
+      <div class="ai-title">P-LLM: Language Models for Pixel Prediction</div>
+      <div class="ai-body">
+        Traditional codecs predict the next pixel using a few neighbors. A large language model can attend to <em>the entire image context</em> — recognizing objects, textures, and semantic patterns across thousands of pixels to make a far more accurate prediction. A more accurate prediction means a smaller error — which means fewer bits.
+        <br><br>
+        This is the same principle that makes LLMs excel at next-token prediction in text: understanding context at scale. Applied to images, it pushes compression ratios beyond what any classical algorithm can achieve.
+      </div>
+      <div class="ai-token-demo">
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Pixel sequence as "language tokens"</div>
+        <div class="token-row" id="token-row"></div>
+        <div style="margin-top:1rem;font-size:12px;color:var(--muted);">Each pixel value is a "token." The LLM predicts the next token using the full prior context — like predicting the next word in a sentence.</div>
+      </div>
+    </div>
+
+    <div class="concept-grid" style="margin-top:2rem;">
+      <div class="concept-card fade-in">
+        <div class="card-icon icon-purple">🤖</div>
+        <div class="card-title">Context Window = Entire Image</div>
+        <div class="card-body">Unlike classical predictors that see 2–4 neighbors, an LLM sees the whole image. It recognizes that a sky region will be blue, a face will have skin tones — using semantic understanding.</div>
+      </div>
+      <div class="concept-card fade-in">
+        <div class="card-icon icon-pink">📉</div>
+        <div class="card-title">Smaller Errors = Better Compression</div>
+        <div class="card-body">Better prediction → smaller errors → more peaked error histogram → lower entropy → fewer bits required. AI achieves this systematically across all image types.</div>
+      </div>
+      <div class="concept-card fade-in">
+        <div class="card-icon icon-blue">⚖️</div>
+        <div class="card-title">Speed vs Ratio Trade-off</div>
+        <div class="card-body">P-LLM requires GPU inference for each pixel — far too slow for real-time use. Classical JPEG-LS remains king for speed-critical applications like medical device streaming.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SUMMARY -->
+<section id="summary" style="background:var(--bg2);">
+  <div class="section-inner" style="text-align:center;">
+    <span class="section-tag" style="display:block;text-align:center;">Key Takeaways</span>
+    <h2 class="section-title fade-in" style="text-align:center;">The <span>Full Picture</span></h2>
+    <p class="section-sub fade-in" style="text-align:center;margin:0 auto 3rem;">Lossless compression is a layered process — each stage removes a different type of redundancy.</p>
+    <div style="display:flex;flex-direction:column;gap:1.5rem;max-width:700px;margin:0 auto;">
+      <div style="display:flex;align-items:flex-start;gap:1.25rem;text-align:left;" class="fade-in">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(79,128,255,0.15);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:600;color:var(--accent);flex-shrink:0;">1</div>
+        <div><strong>Bit-Plane Decomposition</strong> — splits a pixel into binary layers; smooth regions produce compressible runs of identical bits via RLC.</div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:1.25rem;text-align:left;" class="fade-in">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(45,212,191,0.15);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:600;color:var(--teal);flex-shrink:0;">2</div>
+        <div><strong>Predictive Coding</strong> — stores only the prediction error instead of raw pixel values, dramatically reducing data entropy.</div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:1.25rem;text-align:left;" class="fade-in">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,0.15);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:600;color:var(--amber);flex-shrink:0;">3</div>
+        <div><strong>Entropy Coding</strong> — Huffman or Arithmetic coding assigns optimal bit lengths to each symbol, squeezing to the information-theoretic limit.</div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:1.25rem;text-align:left;" class="fade-in">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(124,92,252,0.15);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:600;color:var(--accent2);flex-shrink:0;">4</div>
+        <div><strong>AI Frontier</strong> — LLM-based predictors use semantic context to outperform classical algorithms, at the cost of speed.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>Educational reference on <strong>Lossless Image Compression</strong> · Bit-plane transformation · Predictive coding · Entropy coding · JPEG-LS · AI-based methods</p>
+</footer>
+
+<script>
+// ——— PIXEL HERO ANIMATION ———
+(function(){
+  const wrap = document.getElementById('pixel-visual');
+  const N = 8, SIZE = 8;
+  let cells = [], phase = 0;
+  const vals = [210,210,205,120,120,118,85,82,211,208,120,118,82,80,60,58,205,118,116,80,58,56,40,38,120,82,78,58,40,38,30,28,118,80,58,40,30,28,20,20,82,60,56,38,28,20,15,15,58,40,40,30,20,15,12,12,40,38,38,28,20,15,12,10];
+  for(let r=0;r<N;r++){
+    const row=document.createElement('div'); row.className='pixel-row';
+    for(let c=0;c<N;c++){
+      const px=document.createElement('div'); px.className='px';
+      const v=vals[r*N+c];
+      px.style.background=`rgb(${v},${v},${v+20})`;
+      px.textContent=v;
+      row.appendChild(px); cells.push({el:px,v});
+    }
+    wrap.appendChild(row);
+  }
+  function animPhase(){
+    if(phase===0){
+      cells.forEach(({el,v})=>{ el.style.background=`rgb(${v},${v},${v+20})`; el.style.opacity='1'; });
+    } else if(phase===1){
+      cells.forEach(({el})=>{ el.style.background='rgba(79,128,255,0.3)'; el.style.opacity='0.7'; });
+    } else {
+      cells.forEach(({el,v})=>{ el.style.background=`rgb(${v},${v},${v+20})`; el.style.opacity='1'; });
+    }
+    phase=(phase+1)%3;
+  }
+  animPhase();
+  setInterval(animPhase, 2000);
+})();
+
+// ——— BIT-PLANE SLIDER ———
+(function(){
+  const slider = document.getElementById('pixel-slider');
+  const pvNum = document.getElementById('pv-num');
+  const pvBin = document.getElementById('pv-binary');
+  const sdisplay = document.getElementById('slider-display');
+  const bpGrid = document.getElementById('bp-grid');
+  const colors = ['#f97316','#f59e0b','#eab308','#22c55e','#14b8a6','#3b82f6','#8b5cf6','#ec4899'];
+
+  function update(val){
+    pvNum.textContent = val;
+    sdisplay.textContent = val;
+    const bin = val.toString(2).padStart(8,'0');
+    pvBin.innerHTML = bin.split('').map((b,i)=>
+      b==='1'?`<span class="bit-highlight">${b}</span>`:b
+    ).join('');
+    bpGrid.innerHTML = '';
+    for(let i=7;i>=0;i--){
+      const bit = (val>>i)&1;
+      const weight = Math.pow(2,i);
+      const pct = weight/255*100;
+      const row = document.createElement('div');
+      row.className = 'bp-row';
+      row.innerHTML = `
+        <span class="bp-plane-num">Plane ${i}</span>
+        <div class="bp-bar-container"><div class="bp-bar" style="width:${bit?100:5}%;background:${colors[7-i]};opacity:${bit?1:0.2};"></div></div>
+        <span class="bp-bit-val" style="color:${bit?colors[7-i]:'#4a5568'}">${bit}</span>
+        <span class="bp-weight">2^${i}</span>
+      `;
+      bpGrid.appendChild(row);
+    }
+  }
+  slider.addEventListener('input', ()=>update(parseInt(slider.value)));
+  update(173);
+})();
+
+// ——— RLC DEMO ———
+(function(){
+  const bitsWrap = document.getElementById('rlc-bits');
+  const rawOut = document.getElementById('rlc-raw');
+  const encOut = document.getElementById('rlc-encoded');
+  const badge = document.getElementById('rlc-badge');
+  let bitData = [1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,0,0,0];
+
+  function renderRLC(){
+    bitsWrap.innerHTML='';
+    bitData.forEach((b,i)=>{
+      const el=document.createElement('div');
+      el.className=`rlc-bit ${b?'one':'zero'}`;
+      el.textContent=b;
+      el.onclick=()=>{bitData[i]=1-bitData[i];renderRLC();};
+      bitsWrap.appendChild(el);
+    });
+    rawOut.textContent=bitData.join(' ');
+    // RLC encode
+    let runs=[]; let cur=bitData[0],cnt=1;
+    for(let i=1;i<bitData.length;i++){
+      if(bitData[i]===cur){cnt++;}else{runs.push([cur,cnt]);cur=bitData[i];cnt=1;}
+    }
+    runs.push([cur,cnt]);
+    const encoded=runs.map(([v,c])=>`(${v}×${c})`).join(' ');
+    const origBits=bitData.length*1;
+    const encBits=runs.length*8;
+    const ratio=(origBits/encBits).toFixed(2);
+    encOut.textContent=encoded;
+    badge.innerHTML=`<span class="compression-badge">~${ratio}× compression — ${origBits} bits → ~${encBits} bits (estimated)</span>`;
+    // highlight runs
+    let idx=0;
+    runs.forEach(([v,c])=>{
+      for(let k=0;k<c;k++){
+        const el=bitsWrap.children[idx++];
+        if(el) el.classList.add(v?'run-one':'run-zero');
+      }
+    });
+  }
+  renderRLC();
+})();
+
+// ——— PIXEL GRID DEMO ———
+(function(){
+  const grid = document.getElementById('pg-grid');
+  const pred = document.getElementById('pred-example');
+  const values = [
+    180,182,185,183,180,
+    181,183,187,185,182,
+    182,184,null,186,183,
+    183,185,188,187,184,
+    181,183,186,185,182
+  ];
+  values.forEach((v,i)=>{
+    const cell=document.createElement('div');
+    const row=Math.floor(i/5), col=i%5;
+    if(v===null){
+      cell.className='pg-cell target'; cell.textContent='?';
+    } else if(row<2||(row===2&&col<2)){
+      cell.className='pg-cell known'; cell.textContent=v;
+    } else {
+      cell.className='pg-cell empty'; cell.textContent=v;
+    }
+    grid.appendChild(cell);
+  });
+  // Prediction example: A=184, B=187, C=183
+  const A=184,B=187,C=183,X=186;
+  const P=A+B-C;
+  const err=X-P;
+  pred.innerHTML=`
+    <span style="color:var(--teal)">A</span>=184 (left) &nbsp;<span style="color:var(--amber)">B</span>=187 (top) &nbsp;<span style="color:var(--coral)">C</span>=183 (top-left)<br>
+    <span style="color:var(--accent)">P̂</span> = 184 + 187 − 183 = <strong style="color:var(--accent)">188</strong><br>
+    Actual X = <strong>186</strong><br>
+    <span style="color:var(--green)">Error = 186 − 188 = </span><strong style="color:var(--green)">−2</strong> ← stored instead of 186
+  `;
+})();
+
+// ——— HISTOGRAMS ———
+(function(){
+  const orig=document.getElementById('hist-orig');
+  const err=document.getElementById('hist-err');
+  // Original: roughly uniform
+  [8,9,9,10,9,8,9,9,10,10,9,8,9,10,9,8].forEach(h=>{
+    const b=document.createElement('div');
+    b.className='hist-bar original'; b.style.height=(h*7)+'px';
+    orig.appendChild(b);
+  });
+  // Error: peaked at center
+  [1,1,2,3,5,10,20,60,78,55,18,8,4,2,1,1].forEach(h=>{
+    const b=document.createElement('div');
+    b.className='hist-bar error'; b.style.height=(h*1.0)+'px';
+    err.appendChild(b);
+  });
+})();
+
+// ——— HUFFMAN DISPLAY ———
+(function(){
+  const container = document.getElementById('huffman-display');
+  const data = [
+    {sym:'0', freq:'32%', code:'0', color:'#4f80ff'},
+    {sym:'-1', freq:'18%', code:'10', color:'#2dd4bf'},
+    {sym:'+1', freq:'16%', code:'110', color:'#22c55e'},
+    {sym:'-2', freq:'10%', code:'1110', color:'#f59e0b'},
+    {sym:'+2', freq:'9%',  code:'1111 0', color:'#f97316'},
+    {sym:'other', freq:'15%', code:'1111 1xx', color:'#8b5cf6'},
+  ];
+  container.innerHTML = data.map(d=>`
+    <div class="ht-node" style="margin-bottom:0.6rem;display:flex;align-items:center;gap:10px;">
+      <span class="ht-sym" style="background:${d.color}22;color:${d.color};border:1px solid ${d.color}44;">${d.sym}</span>
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span class="ht-code" style="color:${d.color};">${d.code}</span>
+          <span class="ht-freq">${d.freq}</span>
+        </div>
+        <div class="ht-bar-mini" style="width:${d.freq};background:${d.color};opacity:0.5;"></div>
+      </div>
+    </div>
+  `).join('');
+})();
+
+// ——— ARITHMETIC VIZ ———
+(function(){
+  const wrap = document.getElementById('arith-viz');
+  const segs=[
+    {w:32,color:'#4f80ff',label:'0'},
+    {w:18,color:'#2dd4bf',label:'-1'},
+    {w:16,color:'#22c55e',label:'+1'},
+    {w:10,color:'#f59e0b',label:'-2'},
+    {w:9, color:'#f97316',label:'+2'},
+    {w:15,color:'#8b5cf6',label:'…'},
+  ];
+  let html='<div style="display:flex;height:100%;border-radius:4px;overflow:hidden;">';
+  segs.forEach(s=>{
+    html+=`<div title="${s.label}" style="flex:${s.w};background:${s.color};opacity:0.7;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-family:var(--font-mono);">${s.w>12?s.label:''}</div>`;
+  });
+  html+='</div>';
+  wrap.innerHTML=html;
+})();
+
+// ——— TOKEN ROW ———
+(function(){
+  const row = document.getElementById('token-row');
+  const pixels=[210,212,208,205,120,82,80,60];
+  const colors=['#4f80ff','#4f80ff','#4f80ff','#4f80ff','#f59e0b','#f97316','#f97316','#22c55e'];
+  pixels.forEach((p,i)=>{
+    const t=document.createElement('div');
+    t.className='token';
+    t.textContent=p;
+    t.style.background=colors[i]+'22';
+    t.style.color=colors[i];
+    t.style.borderColor=colors[i]+'44';
+    if(i===4){ t.style.boxShadow=`0 0 0 2px ${colors[i]}66`; t.style.transform='scale(1.08)'; }
+    row.appendChild(t);
+  });
+  const dots=document.createElement('div');
+  dots.textContent='→ predict next...';
+  dots.style.cssText='font-family:var(--font-mono);font-size:12px;color:var(--muted);padding:6px 12px;align-self:center;';
+  row.appendChild(dots);
+  const pred=document.createElement('div');
+  pred.className='token';
+  pred.textContent='?';
+  pred.style.background='rgba(124,92,252,0.2)';
+  pred.style.color='#7c5cfc';
+  pred.style.borderColor='rgba(124,92,252,0.4)';
+  pred.style.animation='pulse 1.5s ease-in-out infinite';
+  row.appendChild(pred);
+})();
+
+// ——— TRADEOFF BARS ———
+(function(){
+  const methods=[
+    {name:'PNG',ratio:55,speed:90},
+    {name:'JPEG-LS',ratio:68,speed:95},
+    {name:'JPEG 2000',ratio:72,speed:50},
+    {name:'WebP',ratio:65,speed:80},
+    {name:'AVIF',ratio:80,speed:20},
+    {name:'JPEG XL',ratio:82,speed:45},
+    {name:'P-LLM',ratio:95,speed:5},
+  ];
+  const ratioColors=['#22c55e','#14b8a6','#3b82f6','#22c55e','#8b5cf6','#ec4899','#f59e0b'];
+  const speedColors=['#22c55e','#22c55e','#f59e0b','#22c55e','#ef4444','#f59e0b','#ef4444'];
+  document.getElementById('tc-ratio').innerHTML=methods.map((m,i)=>`
+    <div class="tc-bar-group">
+      <div class="tc-row">
+        <span class="tc-name">${m.name}</span>
+        <div class="tc-track"><div class="tc-fill" style="width:${m.ratio}%;background:${ratioColors[i]};opacity:0.7;"></div></div>
+        <span class="tc-val">${m.ratio}%</span>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('tc-speed').innerHTML=methods.map((m,i)=>`
+    <div class="tc-bar-group">
+      <div class="tc-row">
+        <span class="tc-name">${m.name}</span>
+        <div class="tc-track"><div class="tc-fill" style="width:${m.speed}%;background:${speedColors[i]};opacity:0.7;"></div></div>
+        <span class="tc-val">${m.speed}%</span>
+      </div>
+    </div>
+  `).join('');
+})();
+
+// ——— SCROLL FADE IN ———
+const observer = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){ e.target.classList.add('visible'); }
+  });
+},{threshold:0.1});
+document.querySelectorAll('.fade-in').forEach(el=>observer.observe(el));
+</script>
+</body>
+</html>
