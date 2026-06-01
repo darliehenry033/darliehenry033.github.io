@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bellman-Ford Algorithm</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #0a0a0f;
+    --deep: #111118;
+    --card: #16161e;
+    --surface: #1e1e2a;
+    --border: rgba(255,255,255,0.07);
+    --border-bright: rgba(255,255,255,0.15);
+    --text: #e8e6f0;
+    --muted: #8884a0;
+    --accent: #7c5cfc;
+    --accent2: #c084fc;
+    --gold: #fbbf24;
+    --red: #f87171;
+    --green: #34d399;
+    --teal: #2dd4bf;
+    --mono: 'Space Mono', monospace;
+    --serif: 'DM Serif Display', serif;
+    --sans: 'DM Sans', sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content:'';
+    position:fixed; inset:0; z-index:0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events:none;
+    opacity: 0.6;
+  }
+  section, nav, footer { position: relative; z-index: 1; }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top:0; left:0; right:0; z-index:100;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 1rem 3rem;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo { font-family:var(--mono); font-size:13px; color:var(--accent2); letter-spacing:0.1em; text-transform:uppercase; }
+  .nav-links { display:flex; gap:2rem; }
+  .nav-links a { font-size:13px; color:var(--muted); text-decoration:none; letter-spacing:0.05em; transition:color .2s; }
+  .nav-links a:hover { color:var(--text); }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align: center;
+    padding: 8rem 2rem 4rem;
+    position: relative;
+  }
+  .hero-glow {
+    position:absolute;
+    width:600px; height:600px;
+    background: radial-gradient(circle, rgba(124,92,252,0.18) 0%, transparent 70%);
+    top:50%; left:50%; transform:translate(-50%,-55%);
+    pointer-events:none;
+  }
+  .hero-eyebrow {
+    font-family:var(--mono); font-size:11px; color:var(--accent);
+    letter-spacing:0.2em; text-transform:uppercase;
+    background: rgba(124,92,252,0.12);
+    border: 1px solid rgba(124,92,252,0.3);
+    padding: 5px 16px; border-radius:100px;
+    display:inline-block; margin-bottom:2rem;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(3rem, 8vw, 7rem);
+    line-height: 1.05;
+    background: linear-gradient(135deg, #fff 30%, var(--accent2) 70%, var(--accent) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 1.5rem;
+    letter-spacing: -0.02em;
+  }
+  .hero-sub {
+    font-size:1.2rem; color:var(--muted); max-width:540px;
+    margin: 0 auto 3rem; font-weight:300;
+  }
+  .hero-badges {
+    display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;
+  }
+  .badge {
+    font-family:var(--mono); font-size:11px; padding:6px 14px;
+    border-radius:6px; letter-spacing:0.05em;
+  }
+  .badge-o { background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.25); color:var(--gold); }
+  .badge-b { background:rgba(45,212,191,0.08); border:1px solid rgba(45,212,191,0.2); color:var(--teal); }
+  .badge-r { background:rgba(248,113,113,0.08); border:1px solid rgba(248,113,113,0.2); color:var(--red); }
+
+  /* ── SCROLL INDICATOR ── */
+  .scroll-hint {
+    position:absolute; bottom:2.5rem; left:50%; transform:translateX(-50%);
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:0.1em;
+    animation: fade-bob 2s ease-in-out infinite;
+  }
+  .scroll-line { width:1px; height:48px; background:linear-gradient(to bottom, var(--muted), transparent); }
+  @keyframes fade-bob { 0%,100%{opacity:.4;transform:translateX(-50%) translateY(0)} 50%{opacity:.9;transform:translateX(-50%) translateY(6px)} }
+
+  /* ── SECTIONS ── */
+  section { padding: 6rem 2rem; max-width:1100px; margin:0 auto; }
+  .section-label {
+    font-family:var(--mono); font-size:11px; color:var(--accent);
+    letter-spacing:0.2em; text-transform:uppercase; margin-bottom:1rem;
+  }
+  h2 {
+    font-family: var(--serif);
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    line-height:1.15;
+    margin-bottom: 1.5rem;
+    letter-spacing:-0.01em;
+  }
+  h3 {
+    font-family: var(--sans); font-weight:600;
+    font-size:1.15rem; margin-bottom:.75rem; color:var(--text);
+  }
+  p { color: var(--muted); margin-bottom:1.2rem; }
+  p strong { color: var(--text); font-weight:500; }
+
+  /* ── DIVIDER ── */
+  .divider {
+    width:100%; height:1px;
+    background:linear-gradient(to right, transparent, var(--border-bright), transparent);
+    margin: 0 auto;
+    max-width:1100px;
+  }
+
+  /* ── CONCEPT CARDS ── */
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1.5rem; margin-top:3rem; }
+  .card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:16px; padding:1.75rem;
+    position:relative; overflow:hidden;
+    transition:border-color .3s, transform .3s;
+  }
+  .card:hover { border-color:var(--border-bright); transform:translateY(-3px); }
+  .card-icon {
+    width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    font-size:20px; margin-bottom:1rem;
+  }
+  .card-icon.purple { background:rgba(124,92,252,0.15); }
+  .card-icon.gold { background:rgba(251,191,36,0.1); }
+  .card-icon.teal { background:rgba(45,212,191,0.1); }
+  .card-icon.red { background:rgba(248,113,113,0.1); }
+  .card::before {
+    content:''; position:absolute; inset:0;
+    background:radial-gradient(circle at 0% 0%, rgba(124,92,252,0.06) 0%, transparent 60%);
+    pointer-events:none;
+  }
+
+  /* ── ALGORITHM STEPS ── */
+  .steps-wrapper { margin-top:3rem; }
+  .step-nav { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:2.5rem; }
+  .step-btn {
+    font-family:var(--mono); font-size:12px; padding:8px 20px;
+    border-radius:8px; border:1px solid var(--border); background:transparent;
+    color:var(--muted); cursor:pointer; transition:all .2s; letter-spacing:0.05em;
+  }
+  .step-btn:hover { border-color:var(--border-bright); color:var(--text); }
+  .step-btn.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .step-panel { display:none; }
+  .step-panel.active { display:grid; grid-template-columns:1fr 1fr; gap:2rem; }
+  @media(max-width:700px){ .step-panel.active { grid-template-columns:1fr; } }
+  .step-desc { padding:1.5rem 0; }
+  .step-desc h3 { font-size:1.4rem; font-family:var(--serif); margin-bottom:.75rem; color:var(--text); }
+  .step-visual {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:12px; padding:1.5rem;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* ── INTERACTIVE DEMO ── */
+  #demo { padding-bottom: 2rem; }
+  .demo-container {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:20px; overflow:hidden; margin-top:2.5rem;
+  }
+  .demo-header {
+    padding:1.25rem 1.75rem; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;
+  }
+  .demo-title { font-family:var(--mono); font-size:13px; color:var(--text); letter-spacing:0.05em; }
+  .demo-controls { display:flex; gap:.75rem; align-items:center; flex-wrap:wrap; }
+  .btn {
+    font-family:var(--mono); font-size:12px; padding:8px 18px;
+    border-radius:8px; border:1px solid var(--border); background:var(--surface);
+    color:var(--text); cursor:pointer; transition:all .2s; letter-spacing:0.04em;
+    white-space:nowrap;
+  }
+  .btn:hover { border-color:var(--border-bright); background:rgba(255,255,255,0.05); }
+  .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .btn.primary:hover { background:#6b4ce0; }
+  .btn.danger { background:rgba(248,113,113,0.1); border-color:rgba(248,113,113,0.25); color:var(--red); }
+  .btn:disabled { opacity:.35; cursor:not-allowed; }
+  .demo-body { display:grid; grid-template-columns:1fr 380px; }
+  @media(max-width:900px){ .demo-body { grid-template-columns:1fr; } }
+  #graph-canvas {
+    width:100%; min-height:400px;
+    background:var(--deep);
+    border-right:1px solid var(--border);
+  }
+  .demo-panel {
+    padding:1.5rem;
+    display:flex; flex-direction:column; gap:1.25rem;
+  }
+  .table-wrap { overflow-x:auto; }
+  table.dist-table {
+    width:100%; border-collapse:collapse; font-family:var(--mono); font-size:12px;
+  }
+  .dist-table th {
+    color:var(--muted); font-weight:400; letter-spacing:0.08em; text-transform:uppercase;
+    padding:6px 10px; border-bottom:1px solid var(--border); text-align:left;
+  }
+  .dist-table td {
+    padding:6px 10px; border-bottom:1px solid rgba(255,255,255,0.04);
+    transition: background .3s, color .3s;
+  }
+  .dist-table tr.updated td { color:var(--gold); }
+  .dist-table tr.source td:first-child { color:var(--green); }
+  .dist-table tr.finalized td { color:var(--teal); }
+
+  .log-box {
+    background:var(--deep); border:1px solid var(--border);
+    border-radius:10px; padding:1rem; font-family:var(--mono); font-size:11px;
+    max-height:200px; overflow-y:auto; line-height:1.8;
+  }
+  .log-box .log-info { color:var(--muted); }
+  .log-box .log-update { color:var(--gold); }
+  .log-box .log-edge { color:var(--accent2); }
+  .log-box .log-done { color:var(--green); }
+  .log-box .log-neg { color:var(--red); }
+  .iteration-tag {
+    font-family:var(--mono); font-size:11px; letter-spacing:0.08em;
+    background:rgba(124,92,252,0.12); border:1px solid rgba(124,92,252,0.25);
+    color:var(--accent2); padding:4px 12px; border-radius:6px; display:inline-block;
+  }
+  .status-msg {
+    font-size:13px; color:var(--muted); padding:.75rem 1rem;
+    background:var(--deep); border-radius:8px; border:1px solid var(--border);
+    line-height:1.5;
+  }
+  .status-msg.ok { border-color:rgba(52,211,153,0.2); color:var(--green); }
+  .status-msg.warn { border-color:rgba(248,113,113,0.2); color:var(--red); }
+
+  /* ── PSEUDO CODE ── */
+  .pseudo {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:16px; padding:2rem; margin-top:2.5rem;
+    font-family:var(--mono); font-size:13.5px; line-height:2;
+    position:relative; overflow:hidden;
+  }
+  .pseudo::before {
+    content:'PSEUDOCODE';
+    position:absolute; top:1.25rem; right:1.5rem;
+    font-size:10px; color:var(--muted); letter-spacing:0.2em;
+  }
+  .pseudo .kw { color:var(--accent2); }
+  .pseudo .fn { color:var(--gold); }
+  .pseudo .cm { color:#4b4b60; }
+  .pseudo .num { color:var(--teal); }
+  .pseudo .vr { color:var(--text); }
+  .indent1 { padding-left:1.5rem; }
+  .indent2 { padding-left:3rem; }
+  .indent3 { padding-left:4.5rem; }
+  .pseudo-line { display:block; transition: background .2s; border-radius:4px; padding:0 .5rem; }
+  .pseudo-line:hover { background:rgba(255,255,255,0.04); }
+  .pseudo-line.highlight { background:rgba(124,92,252,0.12); }
+
+  /* ── COMPLEXITY TABLE ── */
+  .cmplx-grid {
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1.5rem; margin-top:2.5rem;
+  }
+  .cmplx-card {
+    background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1.5rem;
+    text-align:center; transition: border-color .3s;
+  }
+  .cmplx-card:hover { border-color:var(--border-bright); }
+  .cmplx-big { font-family:var(--mono); font-size:2.2rem; font-weight:700; margin-bottom:.5rem; }
+  .cmplx-label { font-size:12px; color:var(--muted); letter-spacing:0.05em; }
+  .cmplx-note { font-size:12px; color:var(--muted); margin-top:.5rem; }
+
+  /* ── COMPARISON ── */
+  .compare-grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-top:2.5rem;
+  }
+  @media(max-width:680px){ .compare-grid { grid-template-columns:1fr; } }
+  .compare-col { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1.5rem; }
+  .compare-col h4 { font-family:var(--mono); font-size:13px; letter-spacing:0.1em; margin-bottom:1rem; }
+  .compare-col.bf h4 { color:var(--accent2); }
+  .compare-col.dj h4 { color:var(--gold); }
+  .check-list { list-style:none; display:flex; flex-direction:column; gap:.5rem; }
+  .check-list li { font-size:13.5px; color:var(--muted); display:flex; gap:.75rem; align-items:flex-start; }
+  .check-list li::before { content:'→'; color:var(--border-bright); flex-shrink:0; margin-top:1px; }
+  .check-list li.pro::before { content:'✓'; color:var(--green); }
+  .check-list li.con::before { content:'✗'; color:var(--red); }
+
+  /* ── USE CASES ── */
+  .use-cases { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1.5rem; margin-top:2.5rem; }
+  .use-card {
+    background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1.5rem;
+    display:flex; flex-direction:column; gap:.75rem; transition:transform .3s, border-color .3s;
+  }
+  .use-card:hover { transform:translateY(-4px); border-color:var(--border-bright); }
+  .use-num { font-family:var(--mono); font-size:11px; color:var(--accent); letter-spacing:0.1em; }
+  .use-card h4 { font-size:1rem; font-weight:600; color:var(--text); }
+  .use-card p { font-size:13.5px; margin:0; }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align:center; padding:3rem 2rem;
+    border-top:1px solid var(--border);
+    font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:0.1em;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes pulse-ring { 0%{transform:scale(1);opacity:.6} 100%{transform:scale(1.6);opacity:0} }
+  @keyframes slide-up { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  .animate-in { animation: slide-up .6s ease both; }
+  .delay-1 { animation-delay:.1s; }
+  .delay-2 { animation-delay:.2s; }
+  .delay-3 { animation-delay:.3s; }
+
+  /* ── GRAPH CANVAS ── */
+  svg#graph-svg { width:100%; height:400px; }
+  .node-circle { transition: r .3s, filter .3s; cursor:pointer; }
+  .node-circle:hover { filter:brightness(1.3); }
+  .edge-line { transition: stroke .4s, stroke-width .4s; }
+
+  .speed-label { font-family:var(--mono); font-size:11px; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-logo">BELLMAN — FORD</span>
+  <div class="nav-links">
+    <a href="#overview">Overview</a>
+    <a href="#algorithm">Algorithm</a>
+    <a href="#demo">Interactive</a>
+    <a href="#complexity">Complexity</a>
+    <a href="#usecases">Use Cases</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="top">
+  <div class="hero-glow"></div>
+  <div class="hero-eyebrow animate-in">Graph Algorithms</div>
+  <h1 class="animate-in delay-1">Bellman-Ford</h1>
+  <p class="hero-sub animate-in delay-2">Find shortest paths from a single source — even when edges carry negative weights.</p>
+  <div class="hero-badges animate-in delay-3">
+    <span class="badge badge-o">O(V · E) Time</span>
+    <span class="badge badge-b">Negative Weights ✓</span>
+    <span class="badge badge-r">Detects Negative Cycles</span>
+  </div>
+  <div class="scroll-hint">
+    <span>SCROLL</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- OVERVIEW -->
+<section id="overview">
+  <div class="section-label">§ 01 — Overview</div>
+  <h2>What is Bellman-Ford?</h2>
+  <p>Bellman-Ford is a <strong>single-source shortest path algorithm</strong> conceived by Richard Bellman and Lester Ford Jr. in the 1950s. Unlike Dijkstra's algorithm, it handles graphs with <strong>negative edge weights</strong> and can detect the existence of <strong>negative weight cycles</strong>.</p>
+  <p>The algorithm works by progressively relaxing edges — repeatedly updating the shortest known distance to each vertex. After <em>|V| − 1</em> passes through all edges, we are guaranteed to have found all shortest paths (assuming no negative cycle exists).</p>
+
+  <div class="cards">
+    <div class="card animate-in">
+      <div class="card-icon purple">🔗</div>
+      <h3>Edge Relaxation</h3>
+      <p>For each edge (u, v, w), if dist[u] + w &lt; dist[v], we update dist[v]. This "relaxes" our estimate closer to the true shortest path.</p>
+    </div>
+    <div class="card animate-in delay-1">
+      <div class="card-icon gold">🔁</div>
+      <h3>V − 1 Iterations</h3>
+      <p>A shortest path in a graph with V nodes can contain at most V − 1 edges. Running V − 1 rounds of relaxation guarantees convergence.</p>
+    </div>
+    <div class="card animate-in delay-2">
+      <div class="card-icon red">⚠️</div>
+      <h3>Negative Cycle Detection</h3>
+      <p>Running one extra (V-th) round reveals negative cycles: any distance that can still be reduced indicates a negative weight cycle exists.</p>
+    </div>
+    <div class="card animate-in delay-3">
+      <div class="card-icon teal">🌐</div>
+      <h3>Works on Directed Graphs</h3>
+      <p>Bellman-Ford handles directed graphs naturally. It is used in distance-vector routing protocols like RIP, and in financial arbitrage detection.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ALGORITHM STEPS -->
+<section id="algorithm">
+  <div class="section-label">§ 02 — How It Works</div>
+  <h2>Step-by-Step Walkthrough</h2>
+  <p>The algorithm follows a clear, methodical structure. Click each phase to understand what happens at every stage.</p>
+
+  <div class="steps-wrapper">
+    <div class="step-nav">
+      <button class="step-btn active" onclick="showStep(0,this)">① Initialize</button>
+      <button class="step-btn" onclick="showStep(1,this)">② Relax Edges</button>
+      <button class="step-btn" onclick="showStep(2,this)">③ Repeat V−1 Times</button>
+      <button class="step-btn" onclick="showStep(3,this)">④ Detect Negative Cycle</button>
+    </div>
+
+    <div class="step-panel active" id="sp-0">
+      <div class="step-desc">
+        <h3>Initialization</h3>
+        <p>Set the <strong>source node's distance to 0</strong>. All other nodes are initialized to <strong>positive infinity</strong> (∞), meaning they are currently unreachable.</p>
+        <p>We also initialize a predecessor array to track the shortest-path tree, which lets us reconstruct the actual path after the algorithm completes.</p>
+        <div style="margin-top:1.5rem; display:flex; gap:1rem; flex-wrap:wrap;">
+          <div style="background:var(--deep); border:1px solid var(--border); border-radius:10px; padding:1rem 1.5rem;">
+            <div style="font-family:var(--mono); font-size:12px; color:var(--muted); margin-bottom:.5rem;">Source node</div>
+            <div style="font-family:var(--mono); font-size:1.8rem; color:var(--green);">dist[S] = 0</div>
+          </div>
+          <div style="background:var(--deep); border:1px solid var(--border); border-radius:10px; padding:1rem 1.5rem;">
+            <div style="font-family:var(--mono); font-size:12px; color:var(--muted); margin-bottom:.5rem;">All other nodes</div>
+            <div style="font-family:var(--mono); font-size:1.8rem; color:var(--muted);">dist[v] = ∞</div>
+          </div>
+        </div>
+      </div>
+      <div class="step-visual">
+        <svg viewBox="0 0 320 240" width="100%">
+          <defs>
+            <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="#7c5cfc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+          <!-- edges -->
+          <line x1="90" y1="120" x2="160" y2="80" stroke="#2a2a3a" stroke-width="1.5" marker-end="url(#ah)"/>
+          <line x1="90" y1="120" x2="160" y2="160" stroke="#2a2a3a" stroke-width="1.5" marker-end="url(#ah)"/>
+          <line x1="175" y1="80" x2="230" y2="120" stroke="#2a2a3a" stroke-width="1.5" marker-end="url(#ah)"/>
+          <line x1="175" y1="160" x2="230" y2="120" stroke="#2a2a3a" stroke-width="1.5" marker-end="url(#ah)"/>
+          <!-- edge labels -->
+          <text x="117" y="93" font-family="Space Mono" font-size="11" fill="#4b4b60">4</text>
+          <text x="117" y="154" font-family="Space Mono" font-size="11" fill="#4b4b60">2</text>
+          <text x="205" y="93" font-family="Space Mono" font-size="11" fill="#4b4b60">5</text>
+          <text x="205" y="154" font-family="Space Mono" font-size="11" fill="#4b4b60">3</text>
+          <!-- nodes -->
+          <circle cx="80" cy="120" r="26" fill="#16161e" stroke="#34d399" stroke-width="2"/>
+          <text x="80" y="115" font-family="Space Mono" font-size="11" fill="#34d399" text-anchor="middle">S</text>
+          <text x="80" y="130" font-family="Space Mono" font-size="11" fill="#34d399" text-anchor="middle">0</text>
+
+          <circle cx="168" cy="78" r="26" fill="#16161e" stroke="#2a2a3a" stroke-width="1.5"/>
+          <text x="168" y="73" font-family="Space Mono" font-size="11" fill="#4b4b60" text-anchor="middle">A</text>
+          <text x="168" y="88" font-family="Space Mono" font-size="11" fill="#4b4b60" text-anchor="middle">∞</text>
+
+          <circle cx="168" cy="162" r="26" fill="#16161e" stroke="#2a2a3a" stroke-width="1.5"/>
+          <text x="168" y="157" font-family="Space Mono" font-size="11" fill="#4b4b60" text-anchor="middle">B</text>
+          <text x="168" y="172" font-family="Space Mono" font-size="11" fill="#4b4b60" text-anchor="middle">∞</text>
+
+          <circle cx="248" cy="120" r="26" fill="#16161e" stroke="#2a2a3a" stroke-width="1.5"/>
+          <text x="248" y="115" font-family="Space Mono" font-size="11" fill="#4b4b60" text-anchor="middle">T</text>
+          <text x="248" y="130" font-family="Space Mono" font-size="11" fill="#4b4b60" text-anchor="middle">∞</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="step-panel" id="sp-1">
+      <div class="step-desc">
+        <h3>Edge Relaxation</h3>
+        <p>For every edge (u → v) with weight w, we check: is <strong>dist[u] + w &lt; dist[v]</strong>? If yes, we found a shorter path to v through u — so we <em>relax</em> the edge and update dist[v].</p>
+        <p>This is the core operation. One iteration processes <em>all edges</em> in the graph once, potentially improving many distance estimates simultaneously.</p>
+        <div style="background:var(--deep); border:1px solid rgba(251,191,36,0.2); border-radius:10px; padding:1rem 1.5rem; font-family:var(--mono); font-size:13px; color:var(--gold); margin-top:1rem; line-height:2;">
+          <span style="color:#4b4b60">// Relax edge (u → v, weight w)</span><br>
+          <span style="color:#c084fc">if</span> dist[u] + w &lt; dist[v]:<br>
+          &nbsp;&nbsp;dist[v] = dist[u] + w<br>
+          &nbsp;&nbsp;prev[v] = u
+        </div>
+      </div>
+      <div class="step-visual">
+        <svg viewBox="0 0 320 200" width="100%">
+          <defs>
+            <marker id="ah2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+          <line x1="88" y1="100" x2="202" y2="100" stroke="#fbbf24" stroke-width="2" marker-end="url(#ah2)"/>
+          <text x="148" y="88" font-family="Space Mono" font-size="12" fill="#fbbf24" text-anchor="middle">w = 6</text>
+          <circle cx="76" cy="100" r="32" fill="#16161e" stroke="#34d399" stroke-width="2"/>
+          <text x="76" y="95" font-family="Space Mono" font-size="11" fill="#34d399" text-anchor="middle">u</text>
+          <text x="76" y="112" font-family="Space Mono" font-size="13" fill="#34d399" font-weight="bold" text-anchor="middle">3</text>
+          <circle cx="216" cy="100" r="32" fill="#16161e" stroke="#7c5cfc" stroke-width="2"/>
+          <text x="216" y="95" font-family="Space Mono" font-size="11" fill="#c084fc" text-anchor="middle">v</text>
+          <text x="216" y="112" font-family="Space Mono" font-size="13" fill="#c084fc" font-weight="bold" text-anchor="middle">∞</text>
+          <text x="160" y="145" font-family="Space Mono" font-size="11" fill="#34d399" text-anchor="middle">3 + 6 = 9 &lt; ∞  →  update!</text>
+          <text x="216" y="168" font-family="Space Mono" font-size="13" fill="#fbbf24" text-anchor="middle" font-weight="bold">dist[v] = 9</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="step-panel" id="sp-2">
+      <div class="step-desc">
+        <h3>Repeat V − 1 Times</h3>
+        <p>A shortest path through a graph of V nodes can use at most <strong>V − 1 edges</strong> (otherwise it would revisit a node, forming a cycle).</p>
+        <p>By repeating the full edge relaxation pass <strong>V − 1 times</strong>, we propagate shortest distances across paths of increasing length — guaranteeing that every shortest path is found.</p>
+        <p>After iteration k, all shortest paths using at most k edges are correctly computed.</p>
+      </div>
+      <div class="step-visual">
+        <svg viewBox="0 0 300 200" width="100%">
+          <rect x="10" y="20" width="280" height="30" rx="6" fill="rgba(124,92,252,0.15)" stroke="rgba(124,92,252,0.3)" stroke-width="1"/>
+          <text x="150" y="40" font-family="Space Mono" font-size="11" fill="#c084fc" text-anchor="middle">Iteration 1 of V−1</text>
+          <rect x="10" y="65" width="280" height="30" rx="6" fill="rgba(124,92,252,0.1)" stroke="rgba(124,92,252,0.2)" stroke-width="1"/>
+          <text x="150" y="85" font-family="Space Mono" font-size="11" fill="#8884a0" text-anchor="middle">Iteration 2 of V−1</text>
+          <rect x="10" y="110" width="280" height="30" rx="6" fill="rgba(124,92,252,0.06)" stroke="var(--border)" stroke-width="1"/>
+          <text x="150" y="130" font-family="Space Mono" font-size="11" fill="#4b4b60" text-anchor="middle">Iteration 3 of V−1</text>
+          <text x="150" y="160" font-family="Space Mono" font-size="11" fill="#2a2a3a" text-anchor="middle">⋮</text>
+          <rect x="10" y="165" width="280" height="30" rx="6" fill="rgba(52,211,153,0.08)" stroke="rgba(52,211,153,0.2)" stroke-width="1"/>
+          <text x="150" y="185" font-family="Space Mono" font-size="11" fill="#34d399" text-anchor="middle">Iteration V−1  →  DONE</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="step-panel" id="sp-3">
+      <div class="step-desc">
+        <h3>Negative Cycle Detection</h3>
+        <p>After V − 1 iterations, run <strong>one extra pass</strong>. If any edge (u, v, w) can still be relaxed — meaning dist[u] + w &lt; dist[v] — then a <strong>negative weight cycle</strong> is reachable from the source.</p>
+        <p>In such a cycle, traversing the loop indefinitely keeps decreasing the total path cost, so no finite shortest path exists for affected nodes.</p>
+        <div style="background:rgba(248,113,113,0.08); border:1px solid rgba(248,113,113,0.2); border-radius:10px; padding:1rem; font-family:var(--mono); font-size:12px; color:var(--red); margin-top:1rem;">
+          ⚠ Negative cycle detected!<br>
+          <span style="color:#4b4b60">// dist[v] still decreasing after V−1 rounds</span>
+        </div>
+      </div>
+      <div class="step-visual">
+        <svg viewBox="0 0 300 220" width="100%">
+          <defs>
+            <marker id="ah3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="#f87171" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+          <!-- Negative cycle: A → B → C → A -->
+          <path d="M90,80 Q150,30 210,80" stroke="#f87171" stroke-width="1.8" fill="none" marker-end="url(#ah3)"/>
+          <path d="M210,95 Q240,140 180,170" stroke="#f87171" stroke-width="1.8" fill="none" marker-end="url(#ah3)"/>
+          <path d="M110,170 Q60,140 80,95" stroke="#f87171" stroke-width="1.8" fill="none" marker-end="url(#ah3)"/>
+          <!-- weights -->
+          <text x="152" y="38" font-family="Space Mono" font-size="11" fill="#f87171" text-anchor="middle">−3</text>
+          <text x="232" y="140" font-family="Space Mono" font-size="11" fill="#f87171" text-anchor="middle">−2</text>
+          <text x="68" y="140" font-family="Space Mono" font-size="11" fill="#f87171" text-anchor="middle">−4</text>
+          <!-- nodes -->
+          <circle cx="150" cy="90" r="24" fill="#16161e" stroke="#f87171" stroke-width="1.8"/>
+          <text x="150" y="95" font-family="Space Mono" font-size="12" fill="#f87171" text-anchor="middle">A</text>
+          <circle cx="214" cy="165" r="24" fill="#16161e" stroke="#f87171" stroke-width="1.8"/>
+          <text x="214" y="170" font-family="Space Mono" font-size="12" fill="#f87171" text-anchor="middle">B</text>
+          <circle cx="86" cy="165" r="24" fill="#16161e" stroke="#f87171" stroke-width="1.8"/>
+          <text x="86" y="170" font-family="Space Mono" font-size="12" fill="#f87171" text-anchor="middle">C</text>
+          <text x="150" y="210" font-family="Space Mono" font-size="10" fill="#f87171" text-anchor="middle">sum = −9 → infinite loop!</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PSEUDOCODE -->
+<section>
+  <div class="section-label">§ 03 — Pseudocode</div>
+  <h2>The Algorithm in Code</h2>
+  <p>Below is the formal pseudocode. Each line is explorable — hover to highlight.</p>
+  <div class="pseudo">
+    <span class="pseudo-line"><span class="fn">BellmanFord</span>(<span class="vr">G</span>, <span class="vr">source</span>):</span>
+    <span class="pseudo-line indent1 cm">// Step 1: Initialize distances</span>
+    <span class="pseudo-line indent1"><span class="kw">for each</span> vertex <span class="vr">v</span> <span class="kw">in</span> <span class="vr">G</span>.vertices:</span>
+    <span class="pseudo-line indent2"><span class="vr">dist</span>[<span class="vr">v</span>] ← ∞</span>
+    <span class="pseudo-line indent2"><span class="vr">prev</span>[<span class="vr">v</span>] ← <span class="kw">null</span></span>
+    <span class="pseudo-line indent1"><span class="vr">dist</span>[<span class="vr">source</span>] ← <span class="num">0</span></span>
+    <span class="pseudo-line">&nbsp;</span>
+    <span class="pseudo-line indent1 cm">// Step 2: Relax edges |V| − 1 times</span>
+    <span class="pseudo-line indent1"><span class="kw">for</span> <span class="vr">i</span> ← <span class="num">1</span> <span class="kw">to</span> |<span class="vr">V</span>| − <span class="num">1</span>:</span>
+    <span class="pseudo-line indent2"><span class="kw">for each</span> edge (<span class="vr">u</span>, <span class="vr">v</span>, <span class="vr">w</span>) <span class="kw">in</span> <span class="vr">G</span>.edges:</span>
+    <span class="pseudo-line indent3"><span class="kw">if</span> <span class="vr">dist</span>[<span class="vr">u</span>] + <span class="vr">w</span> &lt; <span class="vr">dist</span>[<span class="vr">v</span>]:</span>
+    <span class="pseudo-line indent3">&nbsp;&nbsp;&nbsp;&nbsp;<span class="vr">dist</span>[<span class="vr">v</span>] ← <span class="vr">dist</span>[<span class="vr">u</span>] + <span class="vr">w</span></span>
+    <span class="pseudo-line indent3">&nbsp;&nbsp;&nbsp;&nbsp;<span class="vr">prev</span>[<span class="vr">v</span>] ← <span class="vr">u</span></span>
+    <span class="pseudo-line">&nbsp;</span>
+    <span class="pseudo-line indent1 cm">// Step 3: Check for negative-weight cycles</span>
+    <span class="pseudo-line indent1"><span class="kw">for each</span> edge (<span class="vr">u</span>, <span class="vr">v</span>, <span class="vr">w</span>) <span class="kw">in</span> <span class="vr">G</span>.edges:</span>
+    <span class="pseudo-line indent2"><span class="kw">if</span> <span class="vr">dist</span>[<span class="vr">u</span>] + <span class="vr">w</span> &lt; <span class="vr">dist</span>[<span class="vr">v</span>]:</span>
+    <span class="pseudo-line indent3"><span class="kw">return</span> <span class="vr">ERROR</span>: <span class="num">"Negative cycle detected"</span></span>
+    <span class="pseudo-line">&nbsp;</span>
+    <span class="pseudo-line indent1"><span class="kw">return</span> <span class="vr">dist</span>, <span class="vr">prev</span></span>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- INTERACTIVE DEMO -->
+<section id="demo">
+  <div class="section-label">§ 04 — Interactive Demo</div>
+  <h2>See It Run</h2>
+  <p>Watch Bellman-Ford execute step by step on a live graph. Press <strong>Step</strong> to advance one iteration at a time, or <strong>Auto-Run</strong> to animate.</p>
+
+  <div class="demo-container">
+    <div class="demo-header">
+      <span class="demo-title">// bellman_ford.live</span>
+      <div class="demo-controls">
+        <span class="speed-label">Speed</span>
+        <input type="range" min="200" max="1500" value="700" id="speed-slider" style="width:80px">
+        <button class="btn" id="btn-reset" onclick="resetDemo()">Reset</button>
+        <button class="btn" id="btn-step" onclick="stepOnce()">Step →</button>
+        <button class="btn primary" id="btn-auto" onclick="toggleAuto()">Auto-Run ▶</button>
+        <button class="btn danger" id="btn-neg" onclick="loadNegCycle()">Load Neg. Cycle</button>
+      </div>
+    </div>
+    <div class="demo-body">
+      <svg id="graph-svg" viewBox="0 0 520 380"></svg>
+      <div class="demo-panel">
+        <div>
+          <div class="iteration-tag" id="iter-tag">Iteration: 0 / 0</div>
+        </div>
+        <div>
+          <div style="font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:0.08em; margin-bottom:.75rem;">DISTANCE TABLE</div>
+          <div class="table-wrap">
+            <table class="dist-table" id="dist-table">
+              <thead><tr><th>Node</th><th>Distance</th><th>Via</th></tr></thead>
+              <tbody id="dist-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:0.08em; margin-bottom:.75rem;">LOG</div>
+          <div class="log-box" id="log-box"></div>
+        </div>
+        <div class="status-msg" id="status-msg">Ready. Press Step or Auto-Run.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- COMPLEXITY -->
+<section id="complexity">
+  <div class="section-label">§ 05 — Complexity Analysis</div>
+  <h2>Time & Space</h2>
+  <p>Understanding the performance characteristics helps you decide when Bellman-Ford is the right tool.</p>
+
+  <div class="cmplx-grid">
+    <div class="cmplx-card">
+      <div class="cmplx-big" style="color:var(--accent2);">O(VE)</div>
+      <div class="cmplx-label">TIME COMPLEXITY</div>
+      <div class="cmplx-note">V−1 iterations × E edges per iteration</div>
+    </div>
+    <div class="cmplx-card">
+      <div class="cmplx-big" style="color:var(--teal);">O(V)</div>
+      <div class="cmplx-label">SPACE COMPLEXITY</div>
+      <div class="cmplx-note">Stores dist[] and prev[] for each vertex</div>
+    </div>
+    <div class="cmplx-card">
+      <div class="cmplx-big" style="color:var(--gold);">O(V+E)</div>
+      <div class="cmplx-label">DIJKSTRA (w/ heap)</div>
+      <div class="cmplx-note">Faster, but no negative weights</div>
+    </div>
+    <div class="cmplx-card">
+      <div class="cmplx-big" style="color:var(--red);">O(V³)</div>
+      <div class="cmplx-label">FLOYD-WARSHALL</div>
+      <div class="cmplx-note">All-pairs, handles negatives too</div>
+    </div>
+  </div>
+
+  <div class="compare-grid" style="margin-top:2.5rem;">
+    <div class="compare-col bf">
+      <h4>BELLMAN-FORD</h4>
+      <ul class="check-list">
+        <li class="pro">Handles negative edge weights</li>
+        <li class="pro">Detects negative weight cycles</li>
+        <li class="pro">Works on directed &amp; undirected graphs</li>
+        <li class="pro">Simpler implementation</li>
+        <li class="con">Slower: O(VE) vs O((V+E) log V)</li>
+        <li class="con">Not suitable for large, dense graphs</li>
+      </ul>
+    </div>
+    <div class="compare-col dj">
+      <h4>DIJKSTRA'S</h4>
+      <ul class="check-list">
+        <li class="pro">Much faster with a priority queue</li>
+        <li class="pro">Optimal for non-negative weights</li>
+        <li class="pro">Used in GPS, game pathfinding</li>
+        <li class="con">Fails with negative edge weights</li>
+        <li class="con">Cannot detect negative cycles</li>
+        <li class="con">Requires non-negative weights strictly</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- USE CASES -->
+<section id="usecases">
+  <div class="section-label">§ 06 — Real-World Applications</div>
+  <h2>Where It's Used</h2>
+  <p>Bellman-Ford's unique ability to handle negative weights makes it indispensable in several critical domains.</p>
+
+  <div class="use-cases">
+    <div class="use-card">
+      <div class="use-num">01 —</div>
+      <h4>Network Routing (RIP)</h4>
+      <p>The Routing Information Protocol uses a distributed form of Bellman-Ford to compute shortest paths across network hops, with each router maintaining a distance-vector table.</p>
+    </div>
+    <div class="use-card">
+      <div class="use-num">02 —</div>
+      <h4>Currency Arbitrage</h4>
+      <p>Log-transforming exchange rates into negative weights lets Bellman-Ford detect arbitrage opportunities — cycles where trading currencies yields a profit.</p>
+    </div>
+    <div class="use-card">
+      <div class="use-num">03 —</div>
+      <h4>Traffic Engineering</h4>
+      <p>Road networks with toll credits or reward segments (negative weights) can be modelled and optimally routed using Bellman-Ford.</p>
+    </div>
+    <div class="use-card">
+      <div class="use-num">04 —</div>
+      <h4>Constraint Solving</h4>
+      <p>Difference constraint systems in scheduling and verification reduce to finding shortest paths; Bellman-Ford determines feasibility or finds an optimal assignment.</p>
+    </div>
+    <div class="use-card">
+      <div class="use-num">05 —</div>
+      <h4>Distributed Systems</h4>
+      <p>Its iterative, asynchronous nature makes Bellman-Ford naturally suitable for distributed shortest-path computation where no single node has full graph knowledge.</p>
+    </div>
+    <div class="use-card">
+      <div class="use-num">06 —</div>
+      <h4>Game AI & Simulation</h4>
+      <p>In game worlds where terrain bonuses (negative costs) exist — like magical terrain or power-ups — Bellman-Ford correctly computes the "cheapest" path.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p style="margin:0; font-family:var(--mono); font-size:11px; color:#2a2a3a; letter-spacing:0.1em;">
+    BELLMAN-FORD ALGORITHM EXPLAINER &nbsp;·&nbsp; GRAPH THEORY &nbsp;·&nbsp; SHORTEST PATHS
+  </p>
+</footer>
+
+<script>
+// ─── STEP NAV ───────────────────────────────────────────────────
+function showStep(i, btn) {
+  document.querySelectorAll('.step-panel').forEach((p,j)=>{
+    p.classList.toggle('active', j===i);
+  });
+  document.querySelectorAll('.step-btn').forEach((b,j)=>{
+    b.classList.toggle('active', j===i);
+  });
+}
+
+// ─── GRAPH DATA ──────────────────────────────────────────────────
+const GRAPHS = {
+  normal: {
+    nodes: [
+      {id:'S', x:80,  y:190, label:'S'},
+      {id:'A', x:200, y:80,  label:'A'},
+      {id:'B', x:200, y:300, label:'B'},
+      {id:'C', x:340, y:140, label:'C'},
+      {id:'D', x:340, y:250, label:'D'},
+      {id:'T', x:460, y:190, label:'T'},
+    ],
+    edges: [
+      {u:'S', v:'A', w:6},
+      {u:'S', v:'B', w:7},
+      {u:'A', v:'C', w:5},
+      {u:'A', v:'D', w:-4},
+      {u:'B', v:'A', w:8},
+      {u:'B', v:'D', w:9},
+      {u:'C', v:'T', w:-3},
+      {u:'D', v:'T', w:7},
+      {u:'D', v:'C', w:-2},
+    ]
+  },
+  negcycle: {
+    nodes: [
+      {id:'S', x:80,  y:190, label:'S'},
+      {id:'A', x:240, y:80,  label:'A'},
+      {id:'B', x:380, y:180, label:'B'},
+      {id:'C', x:240, y:290, label:'C'},
+      {id:'T', x:460, y:80, label:'T'},
+    ],
+    edges: [
+      {u:'S', v:'A', w:5},
+      {u:'A', v:'B', w:-4},
+      {u:'B', v:'C', w:-3},
+      {u:'C', v:'A', w:2},
+      {u:'B', v:'T', w:3},
+    ]
+  }
+};
+
+let currentGraph = 'normal';
+let state = {};
+let autoTimer = null;
+
+function initState(graphKey) {
+  currentGraph = graphKey;
+  const g = GRAPHS[graphKey];
+  const dist = {}, prev = {};
+  g.nodes.forEach(n => { dist[n.id] = Infinity; prev[n.id] = null; });
+  dist['S'] = 0;
+  state = {
+    graph: g,
+    dist, prev,
+    iteration: 0,
+    edgeIndex: 0,
+    totalIter: g.nodes.length - 1,
+    done: false,
+    negCycle: false,
+    steps: buildSteps(g, dist, prev),
+    stepIndex: 0,
+    log: []
+  };
+  state.steps = buildSteps(g, JSON.parse(JSON.stringify(dist)), JSON.parse(JSON.stringify(prev)));
+}
+
+function buildSteps(g, initDist, initPrev) {
+  const steps = [];
+  const dist = JSON.parse(JSON.stringify(initDist));
+  const prev = JSON.parse(JSON.stringify(initPrev));
+  const V = g.nodes.length;
+
+  steps.push({ type:'init', dist: JSON.parse(JSON.stringify(dist)), prev: JSON.parse(JSON.stringify(prev)),
+    iter:0, edge:null, msg:'Initialized: source S=0, all others=∞', updated:null });
+
+  for (let i=1; i<=V-1; i++) {
+    let anyUpdate = false;
+    for (const e of g.edges) {
+      const dOld = dist[e.v];
+      let updated = false;
+      if (dist[e.u] !== Infinity && dist[e.u] + e.w < dist[e.v]) {
+        dist[e.v] = dist[e.u] + e.w;
+        prev[e.v] = e.u;
+        updated = true; anyUpdate = true;
+      }
+      steps.push({ type:'relax', dist: JSON.parse(JSON.stringify(dist)), prev: JSON.parse(JSON.stringify(prev)),
+        iter:i, edge:e, updated, dOld,
+        msg: updated
+          ? `↻ Iter ${i}: ${e.u}→${e.v} (w=${e.w}) updated: ${dOld===Infinity?'∞':dOld} → ${dist[e.v]}`
+          : `  Iter ${i}: ${e.u}→${e.v} (w=${e.w}) no update`
+      });
+    }
+  }
+
+  // Neg cycle check
+  let negCycle = false;
+  for (const e of g.edges) {
+    if (dist[e.u] !== Infinity && dist[e.u] + e.w < dist[e.v]) {
+      negCycle = true;
+      steps.push({ type:'negcycle', dist: JSON.parse(JSON.stringify(dist)), prev: JSON.parse(JSON.stringify(prev)),
+        iter:V, edge:e, updated:false,
+        msg:`⚠ Negative cycle detected via edge ${e.u}→${e.v}!`
+      });
+      break;
+    }
+  }
+  if (!negCycle) {
+    steps.push({ type:'done', dist: JSON.parse(JSON.stringify(dist)), prev: JSON.parse(JSON.stringify(prev)),
+      iter:V-1, edge:null, updated:null,
+      msg:'✓ Algorithm complete. All shortest paths found.'
+    });
+  }
+  return steps;
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────
+const svg = document.getElementById('graph-svg');
+const R = 24;
+
+function getColor(d, nodeId, step) {
+  if (d === Infinity) return '#2a2a3a';
+  if (nodeId === 'S') return '#34d399';
+  if (step && step.edge && step.updated && step.edge.v === nodeId) return '#fbbf24';
+  return '#7c5cfc';
+}
+
+function renderGraph(step) {
+  const g = state.graph;
+  svg.innerHTML = '';
+  const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+  defs.innerHTML = `
+    <marker id="gah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#3a3a4a" stroke-width="1.5" stroke-linecap="round"/>
+    </marker>
+    <marker id="gah-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round"/>
+    </marker>
+    <marker id="gah-path" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#7c5cfc" stroke-width="1.5" stroke-linecap="round"/>
+    </marker>
+  `;
+  svg.appendChild(defs);
+
+  g.edges.forEach(e => {
+    const src = g.nodes.find(n=>n.id===e.u);
+    const dst = g.nodes.find(n=>n.id===e.v);
+    const dx = dst.x-src.x, dy = dst.y-src.y;
+    const len = Math.sqrt(dx*dx+dy*dy);
+    const nx=dx/len, ny=dy/len;
+    const x1=src.x+nx*R, y1=src.y+ny*R, x2=dst.x-nx*(R+4), y2=dst.y-ny*(R+4);
+    const isActive = step && step.edge && step.edge.u===e.u && step.edge.v===e.v;
+    const isNeg = step && step.type==='negcycle' && step.edge.u===e.u && step.edge.v===e.v;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+    line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+    line.setAttribute('stroke', isNeg ? '#f87171' : isActive ? '#fbbf24' : '#2e2e3e');
+    line.setAttribute('stroke-width', isActive||isNeg ? '2.5' : '1.5');
+    line.setAttribute('marker-end', isNeg?'url(#gah-active)': isActive?'url(#gah-active)':'url(#gah)');
+    svg.appendChild(line);
+
+    // weight label
+    const mx=(src.x+dst.x)/2, my=(src.y+dst.y)/2;
+    const perp_x=-ny*14, perp_y=nx*14;
+    const bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    const tw = (String(e.w).length*7)+8;
+    bg.setAttribute('x',mx+perp_x-tw/2); bg.setAttribute('y',my+perp_y-9);
+    bg.setAttribute('width',tw); bg.setAttribute('height',14);
+    bg.setAttribute('rx','4'); bg.setAttribute('fill','#0a0a0f');
+    svg.appendChild(bg);
+    const wt = document.createElementNS('http://www.w3.org/2000/svg','text');
+    wt.setAttribute('x',mx+perp_x); wt.setAttribute('y',my+perp_y+1);
+    wt.setAttribute('text-anchor','middle'); wt.setAttribute('font-family','Space Mono');
+    wt.setAttribute('font-size','11'); wt.setAttribute('fill', e.w<0?'#f87171':isActive?'#fbbf24':'#4b4b60');
+    wt.textContent = e.w;
+    svg.appendChild(wt);
+  });
+
+  g.nodes.forEach(n => {
+    const d = step ? step.dist[n.id] : Infinity;
+    const color = getColor(d, n.id, step);
+    const isUpdated = step && step.updated && step.edge && step.edge.v===n.id;
+
+    if (isUpdated) {
+      const ring = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      ring.setAttribute('cx',n.x); ring.setAttribute('cy',n.y); ring.setAttribute('r',R+8);
+      ring.setAttribute('fill','none'); ring.setAttribute('stroke','#fbbf24');
+      ring.setAttribute('stroke-width','1'); ring.setAttribute('opacity','0.4');
+      svg.appendChild(ring);
+    }
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx',n.x); circle.setAttribute('cy',n.y); circle.setAttribute('r',R);
+    circle.setAttribute('fill','#111118'); circle.setAttribute('stroke',color); circle.setAttribute('stroke-width','2');
+    svg.appendChild(circle);
+
+    const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+    label.setAttribute('x',n.x); label.setAttribute('y',n.y-6);
+    label.setAttribute('text-anchor','middle'); label.setAttribute('font-family','Space Mono');
+    label.setAttribute('font-size','12'); label.setAttribute('fill',color);
+    label.textContent = n.id;
+    svg.appendChild(label);
+
+    const dist = document.createElementNS('http://www.w3.org/2000/svg','text');
+    dist.setAttribute('x',n.x); dist.setAttribute('y',n.y+10);
+    dist.setAttribute('text-anchor','middle'); dist.setAttribute('font-family','Space Mono');
+    dist.setAttribute('font-size','11'); dist.setAttribute('fill', d===Infinity ? '#3a3a4a' : color);
+    dist.setAttribute('font-weight','bold');
+    dist.textContent = d === Infinity ? '∞' : d;
+    svg.appendChild(dist);
+  });
+}
+
+function renderTable(step) {
+  const tbody = document.getElementById('dist-tbody');
+  tbody.innerHTML = '';
+  state.graph.nodes.forEach(n => {
+    const tr = document.createElement('tr');
+    const d = step ? step.dist[n.id] : Infinity;
+    const p = step ? step.prev[n.id] : null;
+    if (n.id==='S') tr.className='source';
+    else if (step && step.updated && step.edge && step.edge.v===n.id) tr.className='updated';
+    else if (d !== Infinity) tr.className='finalized';
+    tr.innerHTML = `<td>${n.id}</td><td>${d===Infinity?'∞':d}</td><td>${p||'—'}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderLog(step) {
+  const box = document.getElementById('log-box');
+  if (!step) return;
+  const div = document.createElement('div');
+  let cls = 'log-info';
+  if (step.type==='negcycle') cls='log-neg';
+  else if (step.type==='done') cls='log-done';
+  else if (step.updated) cls='log-update';
+  else if (step.type==='relax') cls='log-edge';
+  div.className = cls;
+  div.textContent = step.msg;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function renderStatus(step) {
+  const el = document.getElementById('status-msg');
+  const itTag = document.getElementById('iter-tag');
+  if (!step) return;
+  itTag.textContent = `Iteration: ${step.iter} / ${state.graph.nodes.length-1}`;
+  if (step.type==='done') {
+    el.textContent = '✓ All shortest paths found. No negative cycles.';
+    el.className='status-msg ok';
+  } else if (step.type==='negcycle') {
+    el.textContent = '⚠ Negative weight cycle detected! Shortest paths undefined for affected nodes.';
+    el.className='status-msg warn';
+  } else if (step.type==='init') {
+    el.textContent = 'Initialized. Source = 0, others = ∞';
+    el.className='status-msg';
+  } else if (step.updated) {
+    el.textContent = `Updated dist[${step.edge.v}] = ${step.dist[step.edge.v]} via ${step.edge.u}`;
+    el.className='status-msg';
+  } else {
+    el.textContent = `Checking edge ${step.edge.u} → ${step.edge.v} (no update)`;
+    el.className='status-msg';
+  }
+}
+
+function applyStep(idx) {
+  const step = state.steps[idx];
+  renderGraph(step);
+  renderTable(step);
+  renderLog(step);
+  renderStatus(step);
+
+  const isDone = step.type==='done' || step.type==='negcycle';
+  document.getElementById('btn-step').disabled = isDone;
+  if (isDone && autoTimer) { clearInterval(autoTimer); autoTimer=null; document.getElementById('btn-auto').textContent='Auto-Run ▶'; }
+}
+
+function stepOnce() {
+  if (state.stepIndex < state.steps.length-1) {
+    state.stepIndex++;
+    applyStep(state.stepIndex);
+  }
+}
+
+function resetDemo(graphKey) {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer=null; document.getElementById('btn-auto').textContent='Auto-Run ▶'; }
+  initState(graphKey || currentGraph);
+  document.getElementById('log-box').innerHTML='';
+  document.getElementById('btn-step').disabled=false;
+  applyStep(0);
+}
+
+function toggleAuto() {
+  if (autoTimer) {
+    clearInterval(autoTimer); autoTimer=null;
+    document.getElementById('btn-auto').textContent='Auto-Run ▶';
+  } else {
+    const speed = () => parseInt(document.getElementById('speed-slider').value);
+    document.getElementById('btn-auto').textContent='Pause ⏸';
+    autoTimer = setInterval(() => {
+      if (state.stepIndex >= state.steps.length-1) {
+        clearInterval(autoTimer); autoTimer=null;
+        document.getElementById('btn-auto').textContent='Auto-Run ▶';
+        return;
+      }
+      state.stepIndex++;
+      applyStep(state.stepIndex);
+      clearInterval(autoTimer);
+      autoTimer = null;
+      if (document.getElementById('btn-auto').textContent === 'Pause ⏸') {
+        autoTimer = setInterval(arguments.callee, speed());
+      }
+    }, speed());
+  }
+}
+
+function loadNegCycle() {
+  resetDemo('negcycle');
+}
+
+// Init
+resetDemo('normal');
+</script>
+</body>
+</html>
